@@ -1,17 +1,28 @@
 {
-  "id": "import4e",
+  "name": "import4e",
   "title": "4E Character Importer",
-  "description": "Standalone importer for D&D 4E .dnd4e characters",
+  "description": "A standalone .dnd4e character importer for D&D 4e in Foundry VTT.",
   "version": "0.1.0",
-  "minimumCoreVersion": "12",
-  "compatibleCoreVersion": "12.999",
-  "author": "Your Name",
-  "esmodules": ["main.js"],
-  "styles": ["styles/style.css"],
+  "authors": [
+    {
+      "name": "Your Name",
+      "email": "",
+      "url": ""
+    }
+  ],
+  "compatibility": {
+    "minimum": "12",
+    "verified": "12.999",
+    "maximum": "13"
+  },
   "scripts": [],
+  "styles": [],
+  "esmodules": [
+    "main.js"
+  ],
   "languages": [],
   "packs": [],
-  "template": "templates/importer-dialog.hbs",
-  "manifest": "https://yourdomain.com/import4e/module.json",
-  "download": "https://yourdomain.com/import4e/download/import4e.zip"
+  "url": "https://github.com/yourname/import4e",
+  "manifest": "https://your.cdn.net/import4e/module.json",
+  "download": "https://your.cdn.net/import4e/import4e.zip"
 }
