@@ -1,0 +1,17 @@
+{
+  "id": "import4e",
+  "title": "4E Character Importer",
+  "description": "Standalone importer for D&D 4E .dnd4e characters",
+  "version": "0.1.0",
+  "minimumCoreVersion": "12",
+  "compatibleCoreVersion": "12.999",
+  "author": "Your Name",
+  "esmodules": ["main.js"],
+  "styles": ["styles/style.css"],
+  "scripts": [],
+  "languages": [],
+  "packs": [],
+  "template": "templates/importer-dialog.hbs",
+  "manifest": "https://yourdomain.com/import4e/module.json",
+  "download": "https://yourdomain.com/import4e/download/import4e.zip"
+}
