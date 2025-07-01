@@ -15,13 +15,17 @@ export class ImporterApp extends FormApplication {
   constructor(...args) {
     super(...args)
     this._xmlText = null
+    this._progress = 0
+    this._progressMessage = ""
   }
 
   async getData() {
     return {
       hint1: "Choose a .dnd4e file to import.",
       hint2: "Click Import to create the character.",
-      hint3: "This imports feats, features, powers, level, class, race, and abilities."
+      hint3: "This imports feats, features, powers, level, class, race, and abilities.",
+      progress: this._progress,
+      progressMessage: this._progressMessage
     }
   }
 
@@ -35,6 +39,12 @@ export class ImporterApp extends FormApplication {
     })
   }
 
+  _setProgress(percent, message) {
+    this._progress = percent
+    this._progressMessage = message
+    this.render(false)
+  }
+
   async _updateObject(event, formData) {
     if (!this._xmlText) {
       ui.notifications.error("No file selected.")
@@ -42,92 +52,47 @@ export class ImporterApp extends FormApplication {
     }
 
     try {
+      this._setProgress(5, "Parsing XML file...")
       const parser = new DOMParser()
       const xml = parser.parseFromString(this._xmlText, "text/xml")
 
       const details = this._getDetails(xml)
       if (!details.name) {
+        this._setProgress(0, "")
         ui.notifications.error("Parsed character name was empty — aborting import.")
         return
       }
 
-      console.log("Parsed character:", details)
-      console.log("Character stats:", {
-        abilities: details.abilities,
-        defenses: details.defenses,
-        hitPoints: details.hitPoints,
-        healingSurges: details.healingSurges,
-        initiative: details.initiative,
-        speed: details.speed,
-        actionPoints: details.actionPoints,
-        paragonPath: details.paragonPath,
-        epicDestiny: details.epicDestiny
-      })
-      
-      // Debug: Log the actual XML values we're parsing
-      console.log("=== XML PARSING DEBUG ===")
-      const debugXml = parser.parseFromString(this._xmlText, "text/xml")
-      console.log("AC XML value:", debugXml.querySelector('Stat > alias[name="AC"]')?.parentElement?.getAttribute("value"))
-      console.log("Fortitude XML value:", debugXml.querySelector('Stat > alias[name="Fortitude"]')?.parentElement?.getAttribute("value"))
-      console.log("Reflex XML value:", debugXml.querySelector('Stat > alias[name="Reflex"]')?.parentElement?.getAttribute("value"))
-      console.log("Will XML value:", debugXml.querySelector('Stat > alias[name="Will"]')?.parentElement?.getAttribute("value"))
-      console.log("Healing Surges XML value:", debugXml.querySelector('Stat > alias[name="Healing Surges"]')?.parentElement?.getAttribute("value"))
-      console.log("=== END XML DEBUG ===")
-
+      this._setProgress(10, "Importing feats...")
       const featNames = Object.values(this._getRulesElements(xml, "Feat"))
-      const featureNames = Object.values(this._getRulesElements(xml, "Class Feature"))
-      const powerNames = this._getPowerNames(xml)
-      
-      console.log("Power names found:", powerNames)
-      
-      const loot = this._getLoot(xml)
-      console.log("Loot found:", loot)
-      console.log("Loot details:", loot.map(item => item.map(i => ({ name: i.name, type: i.type, count: i.count }))))
-      
-
-
       const feats = await this._fetchItems("dnd-4e-compendium.module-feats", featNames, lookup.feat, true)
+
+      this._setProgress(25, "Importing features...")
+      const featureNames = Object.values(this._getRulesElements(xml, "Class Feature"))
       const features = await this._fetchItems("dnd-4e-compendium.module-features", featureNames, lookup.feature, true)
+
+      this._setProgress(35, "Importing powers...")
+      const powerNames = this._getPowerNames(xml)
       const powers = await this._fetchPowers(powerNames, details.class, details.classes)
+
+      this._setProgress(50, "Importing core powers...")
       const corePowers = await this._fetchCorePowers(details.classes)
+
+      this._setProgress(60, "Importing equipment...")
       const equipment = await this._fetchEquipment(xml)
+
+      this._setProgress(70, "Importing rituals...")
       const rituals = await this._fetchRituals(xml)
+
+      this._setProgress(80, "Importing special items...")
       const specialItems = await this._fetchSpecialItems(xml, details)
 
-      // Debug: Check for cross-category duplicates
-      console.log("=== CROSS-CATEGORY DUPLICATE CHECK ===")
-      console.log("Feats:", feats.map(f => f.name))
-      console.log("Features:", features.map(f => f.name))
-      console.log("Powers:", powers.map(p => p.name))
-      console.log("Core Powers:", corePowers.map(p => p.name))
-      console.log("Equipment:", equipment.map(e => e.name))
-      console.log("Rituals:", rituals.map(r => r.name))
-      console.log("Special Items:", specialItems.map(s => s.name))
-      
-      const debugItems = [...feats, ...features, ...powers, ...corePowers, ...equipment, ...rituals, ...specialItems]
-      const itemNames = debugItems.map(item => item.name)
-      const duplicates = itemNames.filter((name, index) => itemNames.indexOf(name) !== index)
-      if (duplicates.length > 0) {
-        console.log("Cross-category duplicates found:", [...new Set(duplicates)])
-        console.log("All item names:", itemNames)
-      }
-      console.log("=== END DUPLICATE CHECK ===")
-
+      this._setProgress(90, "Finalizing import...")
       // Final deduplication pass across all categories
       const allItems = [...feats, ...features, ...powers, ...corePowers, ...equipment, ...rituals, ...specialItems]
       const finalItems = this._deduplicateFinalItems(allItems)
-      
-      // Debug: Check what items might be affecting AC
-      console.log("=== AC AFFECTING ITEMS DEBUG ===")
-      const acItems = allItems.filter(item => 
-        item.name?.toLowerCase().includes('armor') || 
-        item.name?.toLowerCase().includes('shield') ||
-        item.name?.toLowerCase().includes('ac') ||
-        item.name?.toLowerCase().includes('defense')
-      )
-      console.log("Items that might affect AC:", acItems.map(item => item.name))
-      console.log("=== END AC ITEMS DEBUG ===")
-      
+
+      this._setProgress(95, "Creating actor...")
       // Create actor with correct values
       const actor = await Actor.create({
         name: details.name,
@@ -186,8 +151,11 @@ export class ImporterApp extends FormApplication {
       // Optionally, add a flag to indicate defenses are locked
       await actor.setFlag("import4e", "defensesLocked", true)
       
+      this._setProgress(100, "Import complete!")
       ui.notifications.info(`Imported ${details.name} with ${finalItems.length} total items (${feats.length} feats, ${features.length} features, ${powers.length} powers, ${corePowers.length} core powers, ${equipment.length} equipment, ${rituals.length} rituals, ${specialItems.length} special items).`)
+      setTimeout(() => { this._setProgress(0, "") }, 2000)
     } catch (err) {
+      this._setProgress(0, "")
       console.error(err)
       ui.notifications.error("Failed to import character.")
     }

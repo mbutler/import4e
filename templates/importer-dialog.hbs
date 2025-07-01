@@ -3,6 +3,12 @@
     <label>Choose .dnd4e File</label>
     <input type="file" name="file" accept=".dnd4e, .xml"/>
   </div>
+  {{#if progressMessage}}
+    <div class="import4e-progress-message">{{progressMessage}}</div>
+  {{/if}}
+  {{#if progress}}
+    <progress class="import4e-progress-bar" value="{{progress}}" max="100"></progress>
+  {{/if}}
   <footer class="sheet-footer flexrow">
     <button type="submit"><i class="fas fa-file-import"></i> Import</button>
   </footer>
