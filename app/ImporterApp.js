@@ -7,7 +7,8 @@ export class ImporterApp extends FormApplication {
       title: "D&D 4E Character Importer",
       template: "modules/import4e/templates/importer-dialog.hbs",
       classes: ["dnd4e", "importer"],
-      width: 400,
+      width: 450,
+      height: 150,
       closeOnSubmit: false
     })
   }
@@ -102,8 +103,24 @@ export class ImporterApp extends FormApplication {
             level: details.level,
             class: details.class,
             race: details.race,
+            subrace: details.subrace,
             paragon: details.paragonPath,
             epic: details.epicDestiny,
+            background: details.background,
+            theme: details.theme,
+            deity: details.deity,
+            vision: details.vision,
+            gender: details.gender,
+            alignment: details.alignment,
+            age: details.age,
+            height: details.height,
+            weight: details.weight,
+            size: details.size,
+            weaponProf: { value: details.weaponProficiencies },
+            armourProf: { value: details.armorProficiencies },
+            languages: details.languages,
+            currency: details.currency,
+            company: 'Hexcom',
             surges: {
               value: details.healingSurges.current,
               max: details.healingSurges.maximum
@@ -178,26 +195,74 @@ export class ImporterApp extends FormApplication {
       return 10
     }
 
+    // Helper to get all rules elements of a type as an array
+    const getRulesArray = (type) => Object.values(this._getRulesElements(xml, type))
+
     const className = Object.values(this._getRulesElements(xml, "Class"))[0] || ""
     const raceName = Object.values(this._getRulesElements(xml, "Race"))[0] || ""
     const paragonPathName = Object.values(this._getRulesElements(xml, "Paragon Path"))[0] || ""
     const epicDestinyName = Object.values(this._getRulesElements(xml, "Epic Destiny"))[0] || ""
+    const subraceName = Object.values(this._getRulesElements(xml, "Subrace"))[0] || ""
+    const backgroundName = Object.values(this._getRulesElements(xml, "Background"))[0] || ""
+    const themeName = Object.values(this._getRulesElements(xml, "Theme"))[0] || ""
+    const deityName = Object.values(this._getRulesElements(xml, "Deity"))[0] || ""
+    const visionName = Object.values(this._getRulesElements(xml, "Vision"))[0] || ""
+    const languages = getRulesArray("Language")
+    const weaponProfs = getRulesArray("Proficiency").filter(p => p.includes("Weapon Proficiency"))
+    const armorProfs = getRulesArray("Proficiency").filter(p => p.includes("Armor Proficiency") || p.includes("Shield Proficiency"))
 
-    // Handle hybrid classes
-    let classes = [className]
-    if (className === "Hybrid") {
-      const hybridClasses = Object.values(this._getRulesElements(xml, "Hybrid Class"))
-      classes = hybridClasses.map(c => c.replace("Hybrid ", ""))
-    }
+    // Map proficiencies using lookup table
+    const weaponProfsMapped = weaponProfs.map(p => {
+      const match = p.match(/Weapon Proficiency \((.*)\)/)
+      return match ? (lookup.proficiency[match[1]] || match[1]) : p
+    })
+    const armorProfsMapped = armorProfs.map(p => {
+      const match = p.match(/(Armor|Shield) Proficiency \((.*)\)/)
+      return match ? (lookup.proficiency[match[2]] || match[2]) : p
+    })
+
+    // Map languages using lookup table if available
+    const languagesMapped = languages.map(l => lookup.language?.[l] || l)
+
+    // Currency (parse as best as possible)
+    const currency = {}
+    const moneyFields = ["GP", "SP", "CP"]
+    moneyFields.forEach(type => {
+      const value = getStat(type)
+      if (value && !isNaN(value)) currency[type.toLowerCase()] = value
+    })
+
+    // Other details
+    const gender = getText("Gender")
+    const alignment = getText("Alignment")
+    const age = getText("Age")
+    const height = getText("Height")
+    const weight = getText("Weight")
+    const size = getText("Size") || getText("size")
 
     return {
       name: getText("name") || "Unnamed Character",
       level: Number(getText("Level")) || 1,
       class: className,
-      classes: classes,
+      classes: className === "Hybrid" ? Object.values(this._getRulesElements(xml, "Hybrid Class")).map(c => c.replace("Hybrid ", "")) : [className],
       race: raceName,
+      subrace: subraceName,
       paragonPath: paragonPathName,
       epicDestiny: epicDestinyName,
+      background: backgroundName,
+      theme: themeName,
+      deity: deityName,
+      vision: visionName,
+      gender,
+      alignment,
+      age,
+      height,
+      weight,
+      size,
+      weaponProficiencies: weaponProfsMapped,
+      armorProficiencies: armorProfsMapped,
+      languages: languagesMapped,
+      currency,
       abilities: {
         str: getStat("str"),
         con: getStat("con"),
@@ -206,7 +271,6 @@ export class ImporterApp extends FormApplication {
         wis: getStat("wis"),
         cha: getStat("cha")
       },
-      // Add computed stats
       defenses: {
         ac: getStat(["AC", "Armor Class"]),
         fortitude: getStat(["Fortitude Defense", "Fortitude"]),
@@ -220,10 +284,10 @@ export class ImporterApp extends FormApplication {
       healingSurges: {
         current: getStat("Healing Surges"),
         maximum: getStat("Healing Surges"),
-        value: getStat("Healing Surges") // This will be calculated based on level and constitution
+        value: getStat("Healing Surges")
       },
       initiative: getStat("Initiative"),
-      speed: getStat("Speed") || 6, // Default to 6 if not found
+      speed: getStat("Speed") || 6,
       actionPoints: getStat("_BaseActionPoints") || 1,
       exp: Number(getText("Experience")) || 0
     }
