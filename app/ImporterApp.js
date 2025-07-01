@@ -8,7 +8,7 @@ export class ImporterApp extends FormApplication {
       template: "modules/import4e/templates/importer-dialog.hbs",
       classes: ["dnd4e", "importer"],
       width: 450,
-      height: 150,
+      height: 180,
       closeOnSubmit: false
     })
   }
@@ -26,7 +26,8 @@ export class ImporterApp extends FormApplication {
       hint2: "Click Import to create the character.",
       hint3: "This imports feats, features, powers, level, class, race, and abilities.",
       progress: this._progress,
-      progressMessage: this._progressMessage
+      progressMessage: this._progressMessage,
+      importCorePowers: true
     }
   }
 
@@ -52,6 +53,8 @@ export class ImporterApp extends FormApplication {
       return
     }
 
+    const importCorePowers = formData.importCorePowers !== undefined ? formData.importCorePowers : true
+
     try {
       this._setProgress(5, "Parsing XML file...")
       const parser = new DOMParser()
@@ -73,11 +76,22 @@ export class ImporterApp extends FormApplication {
       const features = await this._fetchItems("dnd-4e-compendium.module-features", featureNames, lookup.feature, true)
 
       this._setProgress(35, "Importing powers...")
-      const powerNames = this._getPowerNames(xml)
+      let powerNames = this._getPowerNames(xml)
       const powers = await this._fetchPowers(powerNames, details.class, details.classes)
 
       this._setProgress(50, "Importing core powers...")
-      const corePowers = await this._fetchCorePowers(details.classes)
+      const corePowersAll = await this._fetchCorePowers(details.classes)
+      let corePowers = []
+      if (importCorePowers) {
+        corePowers = corePowersAll
+      } else {
+        const exceptions = [
+          "Melee Basic Attack",
+          "Ranged Basic Attack",
+          "Ranged Basic Attack Heavy Thrown"
+        ]
+        corePowers = corePowersAll.filter(p => exceptions.includes(p.name))
+      }
 
       this._setProgress(60, "Importing equipment...")
       const equipment = await this._fetchEquipment(xml)
@@ -163,10 +177,6 @@ export class ImporterApp extends FormApplication {
       
       // Import items normally
       await actor.createEmbeddedDocuments("Item", finalItems)
-      
-      // No need to set defense values directly; absolute will lock them
-      // Optionally, add a flag to indicate defenses are locked
-      await actor.setFlag("import4e", "defensesLocked", true)
       
       this._setProgress(100, "Import complete!")
       ui.notifications.info(`Imported ${details.name} with ${finalItems.length} total items (${feats.length} feats, ${features.length} features, ${powers.length} powers, ${corePowers.length} core powers, ${equipment.length} equipment, ${rituals.length} rituals, ${specialItems.length} special items).`)
@@ -415,25 +425,8 @@ export class ImporterApp extends FormApplication {
 
     try {
       const allCorePowers = await pack.getDocuments()
-      const results = []
-
-      // Filter core powers based on character classes
-      for (const power of allCorePowers) {
-        const powerName = power.name.toLowerCase()
-        const isRelevant = classes.some(className => {
-          const classNameLower = className.toLowerCase()
-          return powerName.includes(classNameLower) || 
-                 powerName.includes("basic") || 
-                 powerName.includes("at-will")
-        })
-        
-        if (isRelevant) {
-          results.push(power.toObject())
-        }
-      }
-
-      console.log(`Found ${results.length} relevant core powers for classes: ${classes.join(", ")}`)
-      return results
+      console.log(`Found ${allCorePowers.length} total core powers`)
+      return allCorePowers.map(power => power.toObject())
     } catch (err) {
       console.error("Error fetching core powers:", err)
       return []

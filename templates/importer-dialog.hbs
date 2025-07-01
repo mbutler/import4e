@@ -3,6 +3,12 @@
     <label>Choose .dnd4e File</label>
     <input type="file" name="file" accept=".dnd4e, .xml"/>
   </div>
+  <div class="form-group">
+    <label>
+      <input type="checkbox" name="importCorePowers" checked>
+      Import all core powers
+    </label>
+  </div>
   {{#if progressMessage}}
     <div class="import4e-progress-message">{{progressMessage}}</div>
   {{/if}}
