@@ -52,6 +52,27 @@ export class ImporterApp extends FormApplication {
       }
 
       console.log("Parsed character:", details)
+      console.log("Character stats:", {
+        abilities: details.abilities,
+        defenses: details.defenses,
+        hitPoints: details.hitPoints,
+        healingSurges: details.healingSurges,
+        initiative: details.initiative,
+        speed: details.speed,
+        actionPoints: details.actionPoints,
+        paragonPath: details.paragonPath,
+        epicDestiny: details.epicDestiny
+      })
+      
+      // Debug: Log the actual XML values we're parsing
+      console.log("=== XML PARSING DEBUG ===")
+      const debugXml = parser.parseFromString(this._xmlText, "text/xml")
+      console.log("AC XML value:", debugXml.querySelector('Stat > alias[name="AC"]')?.parentElement?.getAttribute("value"))
+      console.log("Fortitude XML value:", debugXml.querySelector('Stat > alias[name="Fortitude"]')?.parentElement?.getAttribute("value"))
+      console.log("Reflex XML value:", debugXml.querySelector('Stat > alias[name="Reflex"]')?.parentElement?.getAttribute("value"))
+      console.log("Will XML value:", debugXml.querySelector('Stat > alias[name="Will"]')?.parentElement?.getAttribute("value"))
+      console.log("Healing Surges XML value:", debugXml.querySelector('Stat > alias[name="Healing Surges"]')?.parentElement?.getAttribute("value"))
+      console.log("=== END XML DEBUG ===")
 
       const featNames = Object.values(this._getRulesElements(xml, "Feat"))
       const featureNames = Object.values(this._getRulesElements(xml, "Class Feature"))
@@ -92,28 +113,81 @@ export class ImporterApp extends FormApplication {
       }
       console.log("=== END DUPLICATE CHECK ===")
 
-      const actor = await Actor.create({
-        name: details.name,
-        type: "Player Character"
-      })
-
-      await actor.update({
-        "system.details.level": details.level,
-        "system.details.class": details.class,
-        "system.details.race": details.race,
-        "system.abilities.str.value": details.abilities.str,
-        "system.abilities.con.value": details.abilities.con,
-        "system.abilities.dex.value": details.abilities.dex,
-        "system.abilities.int.value": details.abilities.int,
-        "system.abilities.wis.value": details.abilities.wis,
-        "system.abilities.cha.value": details.abilities.cha
-      })
-
       // Final deduplication pass across all categories
       const allItems = [...feats, ...features, ...powers, ...corePowers, ...equipment, ...rituals, ...specialItems]
       const finalItems = this._deduplicateFinalItems(allItems)
       
+      // Debug: Check what items might be affecting AC
+      console.log("=== AC AFFECTING ITEMS DEBUG ===")
+      const acItems = allItems.filter(item => 
+        item.name?.toLowerCase().includes('armor') || 
+        item.name?.toLowerCase().includes('shield') ||
+        item.name?.toLowerCase().includes('ac') ||
+        item.name?.toLowerCase().includes('defense')
+      )
+      console.log("Items that might affect AC:", acItems.map(item => item.name))
+      console.log("=== END AC ITEMS DEBUG ===")
+      
+      // Create actor with correct values
+      const actor = await Actor.create({
+        name: details.name,
+        type: "Player Character",
+        system: {
+          details: {
+            level: details.level,
+            class: details.class,
+            race: details.race,
+            paragon: details.paragonPath,
+            epic: details.epicDestiny,
+            surges: {
+              value: details.healingSurges.current,
+              max: details.healingSurges.maximum
+            }
+          },
+          abilities: {
+            str: { value: details.abilities.str },
+            con: { value: details.abilities.con },
+            dex: { value: details.abilities.dex },
+            int: { value: details.abilities.int },
+            wis: { value: details.abilities.wis },
+            cha: { value: details.abilities.cha }
+          },
+          defences: {
+            ac: { value: details.defenses.ac },
+            fort: { value: details.defenses.fortitude },
+            ref: { value: details.defenses.reflex },
+            wil: { value: details.defenses.will }
+          },
+          attributes: {
+            hp: {
+              value: details.hitPoints.current,
+              max: details.hitPoints.maximum
+            },
+            init: { value: details.initiative },
+            speed: { value: details.speed }
+          },
+          actionpoints: { value: details.actionPoints }
+        }
+      })
+      
+      // Import items normally
       await actor.createEmbeddedDocuments("Item", finalItems)
+      
+      // Force update defense values to match XML values
+      // Use direct property assignment to avoid system recalculation
+      actor.system.defences.ac.value = details.defenses.ac
+      actor.system.defences.fort.value = details.defenses.fortitude
+      actor.system.defences.ref.value = details.defenses.reflex
+      actor.system.defences.wil.value = details.defenses.will
+      
+      // Update the actor to save the changes
+      await actor.update({
+        "system.defences.ac.value": details.defenses.ac,
+        "system.defences.fort.value": details.defenses.fortitude,
+        "system.defences.ref.value": details.defenses.reflex,
+        "system.defences.wil.value": details.defenses.will
+      })      
+
 
       ui.notifications.info(`Imported ${details.name} with ${finalItems.length} total items (${feats.length} feats, ${features.length} features, ${powers.length} powers, ${corePowers.length} core powers, ${equipment.length} equipment, ${rituals.length} rituals, ${specialItems.length} special items).`)
     } catch (err) {
@@ -125,12 +199,24 @@ export class ImporterApp extends FormApplication {
   _getDetails(xml) {
     const getText = tag => xml.querySelector(`Details > ${tag}`)?.textContent?.trim() || ""
     const getStat = alias => {
-      const match = xml.querySelector(`Stat > alias[name='${alias}']`)
-      return match ? Number(match.parentElement.getAttribute("value")) : 10
+      // Try multiple possible alias names for each stat
+      const aliases = Array.isArray(alias) ? alias : [alias]
+      for (const aliasName of aliases) {
+        const match = xml.querySelector(`Stat > alias[name='${aliasName}']`)
+        if (match) {
+          const value = Number(match.parentElement.getAttribute("value"))
+          console.log(`Found ${aliasName} with value: ${value}`)
+          return value
+        }
+      }
+      console.log(`No match found for aliases: ${aliases.join(', ')}`)
+      return 10
     }
 
     const className = Object.values(this._getRulesElements(xml, "Class"))[0] || ""
     const raceName = Object.values(this._getRulesElements(xml, "Race"))[0] || ""
+    const paragonPathName = Object.values(this._getRulesElements(xml, "Paragon Path"))[0] || ""
+    const epicDestinyName = Object.values(this._getRulesElements(xml, "Epic Destiny"))[0] || ""
 
     // Handle hybrid classes
     let classes = [className]
@@ -145,6 +231,8 @@ export class ImporterApp extends FormApplication {
       class: className,
       classes: classes,
       race: raceName,
+      paragonPath: paragonPathName,
+      epicDestiny: epicDestinyName,
       abilities: {
         str: getStat("str"),
         con: getStat("con"),
@@ -152,7 +240,26 @@ export class ImporterApp extends FormApplication {
         int: getStat("int"),
         wis: getStat("wis"),
         cha: getStat("cha")
-      }
+      },
+      // Add computed stats
+      defenses: {
+        ac: getStat(["AC", "Armor Class"]),
+        fortitude: getStat(["Fortitude Defense", "Fortitude"]),
+        reflex: getStat(["Reflex Defense", "Reflex"]),
+        will: getStat(["Will Defense", "Will"])
+      },
+      hitPoints: {
+        current: getStat("Hit Points"),
+        maximum: getStat("Hit Points")
+      },
+      healingSurges: {
+        current: getStat("Healing Surges"),
+        maximum: getStat("Healing Surges"),
+        value: getStat("Healing Surges") // This will be calculated based on level and constitution
+      },
+      initiative: getStat("Initiative"),
+      speed: getStat("Speed") || 6, // Default to 6 if not found
+      actionPoints: getStat("_BaseActionPoints") || 1
     }
   }
 
