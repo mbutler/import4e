@@ -133,3 +133,44 @@ CONFIG.Actor.documentClass.metadata.types
 | Powers, equipment        | 🔜 Next   |
 | Re-import/update         | ❌ Planned |
 | Error-free operation     | ⚠️ Nearly |
+
+--
+
+## Key Fixes Made
+
+### **XML Parsing & Data Extraction**
+- **Defense spelling**: Fixed "defences" vs "defenses" in XML parsing
+- **Power name spaces**: Added fuzzy matching to handle errant spaces in power names
+- **Hybrid class support**: Added proper parsing for hybrid characters with multiple classes
+- **XP parsing**: Fixed to read from `<Details><Experience>` tag and store in `system.details.exp`
+
+### **Power Importing**
+- **Fuzzy matching**: Implemented Levenshtein distance matching for power names with typos/variations
+- **Pattern matching**: Added regex-based matching for powers with parentheses and special characters
+- **Class-aware selection**: Prioritized class-specific powers over generic ones
+- **Core powers**: Added automatic import of basic class powers (at-will, basic attacks)
+- **Deduplication**: Prevented duplicate powers by tracking both names and compendium IDs
+
+### **Equipment & Items**
+- **Composite items**: Handled base items + enchantments (e.g., "Cloth Armor +3")
+- **Ritual importing**: Added support for ritual items with proper categorization
+- **Special items**: Added import of special character items
+- **Placeholder creation**: Created placeholder items for missing compendium entries
+- **Cross-category deduplication**: Removed duplicates across feats, features, powers, equipment, etc.
+
+### **Defense Values**
+- **Direct property assignment**: Used `actor.system.defences.ac.value = 28` instead of `actor.update()` to prevent system recalculation
+- **XML value preservation**: Ensured defense values from .dnd4e file override automatic calculations
+
+### **Character Details**
+- **Level, class, race**: Proper parsing and assignment
+- **Abilities**: Correct stat parsing with fallback aliases
+- **Hit points, healing surges, initiative, speed**: All properly imported
+- **Paragon paths & epic destinies**: Added support for high-level characters
+
+### **Error Handling & Debugging**
+- **Detailed logging**: Added comprehensive console output for troubleshooting
+- **Graceful failures**: Items not found create placeholders instead of breaking import
+- **Validation**: Checks for required data before proceeding
+
+The importer now handles all character types, provides robust fuzzy matching, and preserves the exact values from the .dnd4e files while working with the D&D 4e system's automatic calculations.

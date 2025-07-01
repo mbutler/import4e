@@ -142,7 +142,8 @@ export class ImporterApp extends FormApplication {
             surges: {
               value: details.healingSurges.current,
               max: details.healingSurges.maximum
-            }
+            },
+            exp: Number(details.exp) || 0
           },
           abilities: {
             str: { value: details.abilities.str },
@@ -259,7 +260,8 @@ export class ImporterApp extends FormApplication {
       },
       initiative: getStat("Initiative"),
       speed: getStat("Speed") || 6, // Default to 6 if not found
-      actionPoints: getStat("_BaseActionPoints") || 1
+      actionPoints: getStat("_BaseActionPoints") || 1,
+      exp: Number(getText("Experience")) || 0
     }
   }
 
