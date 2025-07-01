@@ -154,10 +154,18 @@ export class ImporterApp extends FormApplication {
             cha: { value: details.abilities.cha }
           },
           defences: {
-            ac: { value: details.defenses.ac },
-            fort: { value: details.defenses.fortitude },
-            ref: { value: details.defenses.reflex },
-            wil: { value: details.defenses.will }
+            ac: {
+              absolute: details.defenses.ac
+            },
+            fort: {
+              absolute: details.defenses.fortitude
+            },
+            ref: {
+              absolute: details.defenses.reflex
+            },
+            wil: {
+              absolute: details.defenses.will
+            }
           },
           attributes: {
             hp: {
@@ -174,22 +182,10 @@ export class ImporterApp extends FormApplication {
       // Import items normally
       await actor.createEmbeddedDocuments("Item", finalItems)
       
-      // Force update defense values to match XML values
-      // Use direct property assignment to avoid system recalculation
-      actor.system.defences.ac.value = details.defenses.ac
-      actor.system.defences.fort.value = details.defenses.fortitude
-      actor.system.defences.ref.value = details.defenses.reflex
-      actor.system.defences.wil.value = details.defenses.will
+      // No need to set defense values directly; absolute will lock them
+      // Optionally, add a flag to indicate defenses are locked
+      await actor.setFlag("import4e", "defensesLocked", true)
       
-      // Update the actor to save the changes
-      await actor.update({
-        "system.defences.ac.value": details.defenses.ac,
-        "system.defences.fort.value": details.defenses.fortitude,
-        "system.defences.ref.value": details.defenses.reflex,
-        "system.defences.wil.value": details.defenses.will
-      })      
-
-
       ui.notifications.info(`Imported ${details.name} with ${finalItems.length} total items (${feats.length} feats, ${features.length} features, ${powers.length} powers, ${corePowers.length} core powers, ${equipment.length} equipment, ${rituals.length} rituals, ${specialItems.length} special items).`)
     } catch (err) {
       console.error(err)
