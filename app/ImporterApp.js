@@ -75,8 +75,27 @@ export class ImporterApp extends FormApplication {
       const heritageFeatures = await this._fetchHeritageFeatures(xml)
 
       this._setProgress(25, "Importing features...")
-      const featureNames = Object.values(this._getRulesElements(xml, "Class Feature"))
-      const features = await this._fetchItems("dnd-4e-compendium.module-features", featureNames, lookup.feature, true)
+      let featureNames = this._getClassFeatures(xml)
+      // Always include the canonical class feature for the character's class
+      const canonicalClassFeature = lookup.class?.[details.class]
+      if (canonicalClassFeature && !featureNames.includes(canonicalClassFeature)) {
+        featureNames = [...featureNames, canonicalClassFeature]
+      }
+
+      // Split features: canonical class feature vs. others
+      const classFeatureNames = canonicalClassFeature ? [canonicalClassFeature] : []
+      const otherFeatureNames = featureNames.filter(n => n !== canonicalClassFeature)
+
+      // Fetch canonical class feature from classes compendium
+      let classFeatureItems = []
+      if (classFeatureNames.length > 0) {
+        classFeatureItems = await this._fetchItems("dnd-4e-compendium.module-classes", classFeatureNames, lookup.feature, true)
+      }
+      // Fetch other features from features compendium
+      const otherFeatureItems = await this._fetchItems("dnd-4e-compendium.module-features", otherFeatureNames, lookup.feature, true)
+
+      // Merge
+      const features = [...classFeatureItems, ...otherFeatureItems]
 
       this._setProgress(35, "Importing powers...")
       let powerNames = this._getPowerNames(xml)
@@ -1304,12 +1323,17 @@ export class ImporterApp extends FormApplication {
   }
 
   _getHeritageFeatures(xml) {
-    // Extract all RulesElement elements of type 'Racial Trait'
     const heritage = []
-    xml.querySelectorAll('RulesElementTally > RulesElement[type="Racial Trait"]').forEach(elem => {
-      const name = elem.getAttribute('name')
-      if (name) heritage.push(name)
-    })
+    function recurse(node) {
+      if (node.nodeType === 1 && node.nodeName === 'RulesElement' && node.getAttribute('type') === 'Racial Trait') {
+        const name = node.getAttribute('name')
+        if (name) heritage.push(name)
+      }
+      for (let i = 0; i < node.childNodes.length; i++) {
+        recurse(node.childNodes[i])
+      }
+    }
+    recurse(xml)
     return heritage
   }
 
@@ -1384,5 +1408,21 @@ export class ImporterApp extends FormApplication {
       }
     }
     return results
+  }
+
+  // Recursively collect all RulesElement elements of type 'Class Feature' in the XML
+  _getClassFeatures(xml) {
+    const features = []
+    function recurse(node) {
+      if (node.nodeType === 1 && node.nodeName === 'RulesElement' && node.getAttribute('type') === 'Class Feature') {
+        const name = node.getAttribute('name')
+        if (name) features.push(name)
+      }
+      for (let i = 0; i < node.childNodes.length; i++) {
+        recurse(node.childNodes[i])
+      }
+    }
+    recurse(xml)
+    return features
   }
 }
