@@ -67,6 +67,14 @@ export class ImporterApp extends FormApplication {
         return
       }
 
+      // Parse languages for system.languages (spoken/script/custom)
+      const languageNames = Object.values(this._getRulesElements(xml, "Language"))
+      const parsedLanguages = parseLanguages(languageNames)
+
+      // Parse vision for system.senses.special.value
+      const visionNames = Object.values(this._getRulesElements(xml, "Vision"))
+      const parsedVision = parseVision(visionNames)
+
       this._setProgress(10, "Importing feats...")
       const featNames = Object.values(this._getRulesElements(xml, "Feat"))
       const feats = await this._fetchItems("dnd-4e-compendium.module-feats", featNames, lookup.feat, true)
@@ -158,7 +166,6 @@ export class ImporterApp extends FormApplication {
             size: details.size,
             weaponProf: { value: details.weaponProficiencies },
             armourProf: { value: details.armorProficiencies },
-            languages: details.languages,
             currency: details.currency,
             company: 'Hexcom',
             surges: {
@@ -221,6 +228,10 @@ export class ImporterApp extends FormApplication {
               power: 0,
               untyped: 0
             }
+          },
+          languages: parsedLanguages,
+          senses: {
+            special: { value: parsedVision }
           }
         }
       })
@@ -264,7 +275,9 @@ export class ImporterApp extends FormApplication {
       
       this._setProgress(100, "Import complete!")
       ui.notifications.info(`Imported ${details.name} with ${finalItems.length} total items (${feats.length} feats, ${features.length} features, ${powers.length} powers, ${corePowers.length} core powers, ${equipment.length} equipment, ${rituals.length} rituals, ${specialItems.length} special items).`)
-      setTimeout(() => { this._setProgress(0, "") }, 2000)
+      setTimeout(() => {
+        this.close(); // Close the dialog after import is complete (no setProgress after)
+      }, 2000)
     } catch (err) {
       this._setProgress(0, "")
       console.error(err)
@@ -1317,9 +1330,6 @@ export class ImporterApp extends FormApplication {
           }
         }
       }
-      if (!found) {
-        console.warn(`Racial feature not found: ${rawName}`)
-      }
     }
     return results
   }
@@ -1339,4 +1349,32 @@ export class ImporterApp extends FormApplication {
     recurse(xml)
     return features
   }
+}
+
+function parseLanguages(languages) {
+  const builtin = [];
+  const script = [];
+  const custom = [];
+  for (const l of languages) {
+    if (lookup.language && lookup.language[l]) {
+      builtin.push(lookup.language[l]);
+      if (lookup.script && lookup.script[l]) script.push(lookup.script[l]);
+      else script.push("");
+    } else {
+      custom.push(l);
+    }
+  }
+  return {
+    spoken: { value: builtin, custom: custom.join("; ") },
+    script: { value: script, custom: "" }
+  };
+}
+
+function parseVision(visionArr) {
+  const vis = [["nv", ""]];
+  visionArr.forEach(x => {
+    const v = lookup.vision && lookup.vision[x];
+    if (v) vis.push([v, ""]);
+  });
+  return vis;
 }
