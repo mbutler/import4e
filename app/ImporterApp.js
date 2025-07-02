@@ -71,6 +71,9 @@ export class ImporterApp extends FormApplication {
       const featNames = Object.values(this._getRulesElements(xml, "Feat"))
       const feats = await this._fetchItems("dnd-4e-compendium.module-feats", featNames, lookup.feat, true)
 
+      this._setProgress(15, "Importing heritage features...")
+      const heritageFeatures = await this._fetchHeritageFeatures(xml)
+
       this._setProgress(25, "Importing features...")
       const featureNames = Object.values(this._getRulesElements(xml, "Class Feature"))
       const features = await this._fetchItems("dnd-4e-compendium.module-features", featureNames, lookup.feature, true)
@@ -104,7 +107,7 @@ export class ImporterApp extends FormApplication {
 
       this._setProgress(90, "Finalizing import...")
       // Final deduplication pass across all categories
-      const allItems = [...feats, ...features, ...powers, ...corePowers, ...equipment, ...rituals, ...specialItems]
+      const allItems = [...feats, ...heritageFeatures, ...features, ...powers, ...corePowers, ...equipment, ...rituals, ...specialItems]
       const finalItems = this._deduplicateFinalItems(allItems)
 
       this._setProgress(95, "Creating actor...")
@@ -439,8 +442,6 @@ export class ImporterApp extends FormApplication {
     
     return skillMap[skillName] || null
   }
-
-
 
   _getSkillAbility(skillName) {
     // Map skills to their associated abilities
@@ -1300,5 +1301,88 @@ export class ImporterApp extends FormApplication {
 
     console.log(`Final deduplication: ${allItems.length} -> ${finalItems.length} items`)
     return finalItems
+  }
+
+  _getHeritageFeatures(xml) {
+    // Extract all RulesElement elements of type 'Racial Trait'
+    const heritage = []
+    xml.querySelectorAll('RulesElementTally > RulesElement[type="Racial Trait"]').forEach(elem => {
+      const name = elem.getAttribute('name')
+      if (name) heritage.push(name)
+    })
+    return heritage
+  }
+
+  async _fetchHeritageFeatures(xml) {
+    const heritageNames = this._getHeritageFeatures(xml)
+    if (!heritageNames.length) return []
+    const packsToSearch = [
+      "dnd-4e-compendium.module-features",
+      "dnd-4e-compendium.module-races"
+    ]
+    const results = []
+    const seen = new Set()
+    // Helper to normalize names for robust matching
+    const normalizeName = (str) => (str ?? "").trim().normalize("NFKC")
+    for (const rawName of heritageNames) {
+      const normRawName = normalizeName(rawName)
+      let found = false
+      for (const packId of packsToSearch) {
+        const pack = game.packs.get(packId)
+        if (!pack) continue
+        const index = await pack.getIndex()
+        // Convert index to array for debug output
+        const indexArr = Array.from(index.values ? index.values() : index)
+        // Debug: Log pack info and sample names
+        console.log(`[Heritage Import] Searching pack: ${packId}, index length: ${indexArr.length}`)
+        console.log(`[Heritage Import] First 10 names in ${packId}:`, indexArr.slice(0, 10).map(e => e.name))
+        let entry = null
+        // 1. Lookup table (future-proof, not implemented yet)
+        // const canonicalName = lookup.heritage?.[rawName] || rawName
+        // 2. Exact match (normalized)
+        entry = index.find(e => normalizeName(e.name) === normRawName)
+        if (entry) {
+          console.log(`[Heritage Import] Exact match for '${normRawName}' in ${packId}: '${entry.name}'`)
+        }
+        // 3. Partial regex match (case-insensitive, normalized)
+        if (!entry) {
+          const pattern = new RegExp(normRawName.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1"), "i")
+          const matches = index.filter(e => normalizeName(e.name).match(pattern))
+          if (matches.length > 0) {
+            matches.sort((a, b) => a.name.length - b.name.length)
+            entry = matches[0]
+            console.log(`[Heritage Import] Partial match for '${normRawName}' in ${packId}: '${entry.name}'`)
+          }
+        }
+        // 4. Normalized name (remove parentheticals, then normalize)
+        if (!entry && typeof rawName === "string") {
+          const noParen = normRawName.replace(/\s*\(.*?\)$/, "").trim()
+          const pattern = new RegExp(noParen.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1"), "i")
+          const matches = index.filter(e => normalizeName(e.name).match(pattern))
+          if (matches.length > 0) {
+            matches.sort((a, b) => a.name.length - b.name.length)
+            entry = matches[0]
+            console.log(`[Heritage Import] Paren-normalized match for '${noParen}' in ${packId}: '${entry.name}'`)
+          }
+        }
+        if (entry) {
+          const item = await pack.getDocument(entry._id)
+          if (item && !seen.has(item.name)) {
+            const obj = item.toObject()
+            if (!obj.flags) obj.flags = {}
+            if (!obj.flags.import4e) obj.flags.import4e = {}
+            obj.flags.import4e.heritageFeature = true
+            results.push(obj)
+            seen.add(item.name)
+            found = true
+            break // Stop searching other packs for this name
+          }
+        }
+      }
+      if (!found) {
+        console.warn(`[Heritage Import] Heritage feature not found: ${rawName}`)
+      }
+    }
+    return results
   }
 }
