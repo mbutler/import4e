@@ -130,6 +130,10 @@ export class ImporterApp extends FormApplication {
         const themeItems = await this._fetchItems("dnd-4e-compendium.module-themes", [details.theme], lookup.theme, true)
         extraFeatureItems.push(...themeItems)
       }
+      if (details.background) {
+        const backgroundItems = await this._fetchItems("dnd-4e-compendium.module-backgrounds", [details.background], lookup.background, true)
+        extraFeatureItems.push(...backgroundItems)
+      }
       features = [...features, ...extraFeatureItems]
 
       this._setProgress(35, "Importing powers...")
