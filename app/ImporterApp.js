@@ -136,12 +136,15 @@ export class ImporterApp extends FormApplication {
       }
       features = [...features, ...extraFeatureItems]
 
+      this._setProgress(60, "Importing equipment...")
+      const equipment = await this._fetchEquipment(xml)
+
       this._setProgress(35, "Importing powers...")
       let powerNames = this._getPowerNames(xml)
-      const powers = await this._fetchPowers(powerNames, details.class, details.classes)
+      const powers = await this._fetchPowers(powerNames, details.class, details.classes, equipment, feats, features, details.level)
 
       this._setProgress(50, "Importing core powers...")
-      const corePowersAll = await this._fetchCorePowers(details.classes)
+      const corePowersAll = await this._fetchCorePowers(details.classes, equipment, feats, features, details.level)
       let corePowers = []
       if (importCorePowers) {
         corePowers = corePowersAll
@@ -153,9 +156,6 @@ export class ImporterApp extends FormApplication {
         ]
         corePowers = corePowersAll.filter(p => exceptions.includes(p.name))
       }
-
-      this._setProgress(60, "Importing equipment...")
-      const equipment = await this._fetchEquipment(xml)
 
       this._setProgress(70, "Importing rituals...")
       const rituals = await this._fetchRituals(xml)
@@ -585,12 +585,235 @@ export class ImporterApp extends FormApplication {
     return basicAttacks.includes(powerName)
   }
 
-  async _fetchPowers(powerNames, className, classes) {
+  _detectImplementExpertiseConditions(equipment, feats, features, classes) {
+    console.log(`=== Implement Expertise Condition Detection ===`)
+    
+    // Find all implement expertise feats
+    const implementExpertiseFeats = feats.filter(feat => 
+      feat.name.toLowerCase().includes("expertise") && 
+      (feat.name.toLowerCase().includes("implement") || 
+       feat.name.toLowerCase().includes("ki focus") ||
+       feat.name.toLowerCase().includes("orb") ||
+       feat.name.toLowerCase().includes("rod") ||
+       feat.name.toLowerCase().includes("staff") ||
+       feat.name.toLowerCase().includes("tome") ||
+       feat.name.toLowerCase().includes("totem") ||
+       feat.name.toLowerCase().includes("wand"))
+    )
+    
+    console.log(`Feats found:`, feats.map(f => f.name))
+    console.log(`Implement expertise feats:`, implementExpertiseFeats.map(f => f.name))
+    
+    // Check if character has any implement expertise feat
+    const hasImplementExpertise = implementExpertiseFeats.length > 0
+    console.log(`Has implement expertise: ${hasImplementExpertise}`)
+
+    // Check if character is a Monk or has Monk levels (including multiclass)
+    const isMonk = classes.some(cls => 
+      cls.toLowerCase().includes("monk") || 
+      cls.toLowerCase().includes("hybrid monk")
+    ) || feats.some(feat => 
+      feat.name.toLowerCase().includes("multiclass monk") ||
+      feat.name.toLowerCase().includes("master of the fist")
+    )
+    console.log(`Classes:`, classes)
+    console.log(`Is Monk: ${isMonk}`)
+
+    // Check if character has an implement equipped
+    const hasImplementEquipped = equipment.some(item => 
+      item.type === "weapon" && 
+      item.system?.weaponType === "implement" &&
+      item.system?.equipped === true
+    )
+    console.log(`Equipment found:`, equipment.map(e => `${e.name} (${e.type}, equipped: ${e.system?.equipped})`))
+    console.log(`Has implement equipped: ${hasImplementEquipped}`)
+
+    // Check if character has monk weapons equipped (including unarmed strike)
+    const monkWeapons = ["club", "dagger", "javelin", "quarterstaff", "short sword", "shuriken", "sling", "spear", "unarmed strike"]
+    const hasMonkWeaponEquipped = equipment.some(item => 
+      item.type === "weapon" && 
+      item.system?.equipped === true &&
+      monkWeapons.some(weaponName => 
+        item.name.toLowerCase().includes(weaponName)
+      )
+    )
+    console.log(`Has Monk weapon equipped: ${hasMonkWeaponEquipped}`)
+
+    // Check if character has monk class features that enable weapon-as-implement
+    const hasMonkWeaponImplementFeature = features.some(feature => 
+      feature.name === "Monk Class" || 
+      feature.name === "Hybrid Monk Class" ||
+      feature.name.includes("Monastic Tradition") ||
+      feature.name.includes("Unarmed Combatant")
+    )
+    console.log(`Features found:`, features.map(f => f.name))
+    console.log(`Has Monk weapon implement feature: ${hasMonkWeaponImplementFeature}`)
+    console.log(`=====================================`)
+
+    return {
+      implementExpertiseFeats,
+      hasImplementExpertise,
+      isMonk,
+      hasImplementEquipped,
+      hasMonkWeaponEquipped,
+      hasMonkWeaponImplementFeature,
+      // All conditions must be true for implement expertise bonus to apply
+      shouldApplyImplementExpertiseBonus: hasImplementExpertise && isMonk && hasImplementEquipped && 
+                                         (hasMonkWeaponEquipped || hasMonkWeaponImplementFeature)
+    }
+  }
+
+  _calculateImplementExpertiseBonus(implementExpertiseFeats, characterLevel) {
+    console.log(`=== Implement Expertise Bonus Calculation ===`)
+    console.log(`Character level: ${characterLevel}`)
+    console.log(`Implement expertise feats:`, implementExpertiseFeats.map(f => f.name))
+    
+    let totalBonus = 0
+    
+    for (const feat of implementExpertiseFeats) {
+      let featBonus = 0
+      
+      // Parse feat description to understand the bonus
+      const description = feat.system?.description?.value || ""
+      
+      // Look for level-based scaling patterns
+      if (description.includes("+1") && description.includes("+2") && description.includes("+3")) {
+        // Standard expertise scaling: +1 (1-10), +2 (11-20), +3 (21+)
+        if (characterLevel >= 21) {
+          featBonus = 3
+        } else if (characterLevel >= 11) {
+          featBonus = 2
+        } else {
+          featBonus = 1
+        }
+      } else if (description.includes("+2") && description.includes("+3")) {
+        // Alternative scaling: +2 (11-20), +3 (21+)
+        if (characterLevel >= 21) {
+          featBonus = 3
+        } else if (characterLevel >= 11) {
+          featBonus = 2
+        }
+      } else {
+        // Default to +1 if no clear scaling pattern
+        featBonus = 1
+      }
+      
+      console.log(`  ${feat.name}: +${featBonus} bonus`)
+      totalBonus += featBonus
+    }
+    
+    console.log(`Total implement expertise bonus: +${totalBonus}`)
+    console.log(`============================================`)
+    
+    return totalBonus
+  }
+
+  _modifyPowerWithImplementExpertiseBonus(powerObj, implementExpertiseConditions, implementExpertiseBonus, equipment) {
+    // Create a deep copy to avoid modifying the original
+    const modifiedPower = foundry.utils.deepClone(powerObj)
+    
+    // Find the equipped ki focus to use explicitly
+    let kiFocusId = null
+    for (const item of equipment) {
+      if (item.type === "weapon" && 
+          item.system?.equipped === true &&
+          item.system?.weaponType === "implement" &&
+          item.name.toLowerCase().includes("ki focus")) {
+        kiFocusId = item._id
+        break
+      }
+    }
+    
+    // For implement expertise bonus, we want to apply to ALL monk powers, not just implement powers
+    // This is because implement expertise feats allow using weapons as implements
+    // So any monk power can potentially benefit from implement expertise feat bonuses
+    const isMonkPower = modifiedPower.system?.attack?.ability && 
+                       (modifiedPower.name.toLowerCase().includes("ki") ||
+                        modifiedPower.name.toLowerCase().includes("flurry") ||
+                        modifiedPower.name.toLowerCase().includes("monk") ||
+                        modifiedPower.name.toLowerCase().includes("basic attack") ||
+                        // Check if it's a power that would benefit from implement expertise
+                        modifiedPower.system?.attack?.ability === "wis" ||
+                        modifiedPower.system?.attack?.ability === "dex" ||
+                        modifiedPower.system?.attack?.ability === "str")
+
+    if (!isMonkPower) {
+      return modifiedPower
+    }
+
+    // Check if all implement expertise conditions are met
+    if (!implementExpertiseConditions.shouldApplyImplementExpertiseBonus) {
+      return modifiedPower
+    }
+
+    // Add weapon proficiency bonus + implement expertise feat bonus to attack formula
+    if (modifiedPower.system?.attack?.formula) {
+      const currentFormula = modifiedPower.system.attack.formula
+      
+      // Find the highest weapon proficiency bonus from equipped monk weapons
+      const monkWeapons = ["club", "dagger", "javelin", "quarterstaff", "short sword", "shuriken", "sling", "spear", "unarmed strike"]
+      let weaponProfBonus = 0
+      
+      for (const item of equipment) {
+        if (item.type === "weapon" && 
+            item.system?.equipped === true &&
+            monkWeapons.some(weaponName => item.name.toLowerCase().includes(weaponName))) {
+          const profBonus = item.system?.profBonus || 0
+          if (profBonus > weaponProfBonus) {
+            weaponProfBonus = profBonus
+          }
+        }
+      }
+      
+      // If we're using a ki focus as an implement, replace @wepAttack with @impAttack
+      // This ensures we get the ki focus enhancement bonus
+      let newFormula = currentFormula
+      if (kiFocusId && currentFormula.includes('@wepAttack')) {
+        newFormula = currentFormula.replace(/@wepAttack/g, '@impAttack')
+      }
+      
+      // Add the weapon proficiency bonus + implement expertise feat bonus
+      // Ki Focus Expertise allows using weapon proficiency with ki focuses
+      const totalBonus = weaponProfBonus + implementExpertiseBonus
+      newFormula = `${newFormula} + ${totalBonus}`
+      
+      modifiedPower.system.attack.formula = newFormula
+    }
+
+    // Update weapon type to implement and set weapon use to default
+    // This ensures the power uses the ki focus specifically
+    if (kiFocusId) {
+      modifiedPower.system.weaponType = "implement"
+      modifiedPower.system.weaponUse = "default"
+    } else {
+      // Fallback to any weapon type if no ki focus found
+      if (modifiedPower.system?.weaponType && modifiedPower.system.weaponType !== "implement") {
+        modifiedPower.system.weaponType = "any"
+      }
+      if (!modifiedPower.system?.weaponUse || modifiedPower.system.weaponUse === "none") {
+        modifiedPower.system.weaponUse = "default"
+      }
+    }
+
+    // Add flag for tracking/debugging
+    if (!modifiedPower.flags) modifiedPower.flags = {}
+    if (!modifiedPower.flags.import4e) modifiedPower.flags.import4e = {}
+    modifiedPower.flags.import4e.implementExpertiseCompat = true
+    modifiedPower.flags.import4e.implementExpertiseBonus = implementExpertiseBonus
+
+    return modifiedPower
+  }
+
+  async _fetchPowers(powerNames, className, classes, equipment = [], feats = [], features = [], characterLevel = 1) {
     const pack = game.packs.get("dnd-4e-compendium.module-powers")
     if (!pack) {
       console.warn("Power compendium not found")
       return []
     }
+
+    // Detect implement expertise conditions
+    const implementExpertiseConditions = this._detectImplementExpertiseConditions(equipment, feats, features, classes)
+    const implementExpertiseBonus = this._calculateImplementExpertiseBonus(implementExpertiseConditions.implementExpertiseFeats, characterLevel)
 
     const index = await pack.getIndex()
     const results = []
@@ -637,7 +860,10 @@ export class ImporterApp extends FormApplication {
           const isDuplicate = seenPowers.has(item.name) || seenPowerIds.has(item._id)
           
           if (!isDuplicate) {
-            results.push(item.toObject())
+            // Apply implement expertise bonus modification if conditions are met
+            const powerObj = item.toObject()
+            const modifiedPower = this._modifyPowerWithImplementExpertiseBonus(powerObj, implementExpertiseConditions, implementExpertiseBonus, equipment)
+            results.push(modifiedPower)
             seenPowers.add(item.name)
             seenPowerIds.add(item._id)
           }
@@ -650,16 +876,23 @@ export class ImporterApp extends FormApplication {
     return results
   }
 
-  async _fetchCorePowers(classes) {
+  async _fetchCorePowers(classes, equipment = [], feats = [], features = [], characterLevel = 1) {
     const pack = game.packs.get("dnd-4e-compendium.module-core-powers")
     if (!pack) {
       console.warn("Core power compendium not found")
       return []
     }
 
+    // Detect implement expertise conditions
+    const implementExpertiseConditions = this._detectImplementExpertiseConditions(equipment, feats, features, classes)
+    const implementExpertiseBonus = this._calculateImplementExpertiseBonus(implementExpertiseConditions.implementExpertiseFeats, characterLevel)
+
     try {
       const allCorePowers = await pack.getDocuments()
-      return allCorePowers.map(power => power.toObject())
+      return allCorePowers.map(power => {
+        const powerObj = power.toObject()
+        return this._modifyPowerWithImplementExpertiseBonus(powerObj, implementExpertiseConditions, implementExpertiseBonus, equipment)
+      })
     } catch (err) {
       console.error("Error fetching core powers:", err)
       return []

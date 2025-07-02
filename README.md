@@ -59,6 +59,7 @@ import4e/
 - Logging for missing items
 - Fallback names to avoid crashes
 
+
 ## 🔜 Next Planned Features
 
 ### Tier 1: High Value, Low Complexity
@@ -90,7 +91,7 @@ import4e/
 
 ## ⚠️ Known Issues or Limitations
 
-- Some items (e.g., “Arcanist Cantrips”) may not exist in compendium
+- Some items (e.g., "Arcanist Cantrips") may not exist in compendium
 - Suffix-matching logic needed
 - Name fallback guards in place
 
@@ -130,7 +131,8 @@ CONFIG.Actor.documentClass.metadata.types
 | Feats & features import  | ✅ Working |
 | Class, race, stats       | ✅ Working |
 | Fuzzy compendium match   | ✅ Working |
-| Powers, equipment        | 🔜 Next   |
+| Powers, equipment        | ✅ Working |
+| Ki Focus bonus system    | ✅ Working |
 | Re-import/update         | ❌ Planned |
 | Error-free operation     | ⚠️ Nearly |
 
@@ -173,4 +175,11 @@ CONFIG.Actor.documentClass.metadata.types
 - **Graceful failures**: Items not found create placeholders instead of breaking import
 - **Validation**: Checks for required data before proceeding
 
-The importer now handles all character types, provides robust fuzzy matching, and preserves the exact values from the .dnd4e files while working with the D&D 4e system's automatic calculations.
+### **Ki Focus Expertise System**
+- **Implement expertise feats**: Automatically detects and applies bonuses from implement expertise feats (Ki Focus Expertise, Orb Expertise, etc.)
+- **Ki focus compatibility**: Powers can now use ki focuses as implements while preserving weapon proficiency bonuses
+- **Bonus calculation**: Correctly applies both ki focus enhancement bonus and weapon proficiency bonus to monk powers
+- **Formula optimization**: Replaces `@wepAttack` with `@impAttack` when using ki focuses to ensure proper bonus inclusion
+- **Monk weapon detection**: Identifies equipped monk weapons (unarmed strike, quarterstaff, etc.) and applies their proficiency bonuses
+
+The system now properly handles the complex interaction between ki focuses (implements) and weapon powers, ensuring characters with Ki Focus Expertise get the correct total attack bonuses.
