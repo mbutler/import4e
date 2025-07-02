@@ -178,6 +178,24 @@ export class ImporterApp extends FormApplication {
       // Import items normally
       await actor.createEmbeddedDocuments("Item", finalItems)
       
+      // Post-import: Ensure equipped status is correct for items that were explicitly set
+      const equippedStatusUpdates = []
+      for (const item of actor.items) {
+        if (item.flags?.import4e?.equippedStatusSet) {
+          const expectedStatus = item.flags.import4e.originalEquippedStatus
+          if (item.system.equipped !== expectedStatus) {
+            equippedStatusUpdates.push({
+              _id: item.id,
+              "system.equipped": expectedStatus
+            })
+          }
+        }
+      }
+      
+      if (equippedStatusUpdates.length > 0) {
+        await actor.updateEmbeddedDocuments("Item", equippedStatusUpdates)
+      }
+      
       this._setProgress(100, "Import complete!")
       ui.notifications.info(`Imported ${details.name} with ${finalItems.length} total items (${feats.length} feats, ${features.length} features, ${powers.length} powers, ${corePowers.length} core powers, ${equipment.length} equipment, ${rituals.length} rituals, ${specialItems.length} special items).`)
       setTimeout(() => { this._setProgress(0, "") }, 2000)
@@ -762,7 +780,19 @@ export class ImporterApp extends FormApplication {
     if (ritual) {
       const ritualObj = ritual.toObject()
       ritualObj.system.quantity = Number(ritualComponent.count) || 1
-      console.log(`Imported ritual: ${ritual.name}`)
+      
+      // Set equipped status based on equip-count from XML
+      const equipCount = Number(ritualComponent.equipCount) || 0
+      const shouldBeEquipped = equipCount > 0
+      ritualObj.system.equipped = shouldBeEquipped
+      
+      // Ensure the equipped status is correctly set
+      if (ritualObj.system.equipped !== shouldBeEquipped) {
+        console.warn(`  ⚠️ Equipped status mismatch for ritual ${ritual.name}: expected ${shouldBeEquipped}, got ${ritualObj.system.equipped}`)
+        ritualObj.system.equipped = shouldBeEquipped
+      }
+      
+      console.log(`Imported ritual: ${ritual.name} - Equipped: ${ritualObj.system.equipped}`)
       return ritualObj
     }
 
@@ -787,7 +817,7 @@ export class ImporterApp extends FormApplication {
         const components = this._getLootComponents(loot)
         if (components.length > 0) {
           elements.push(components)
-          console.log(`  ✓ Added loot with components:`, components.map(c => c.name))
+          console.log(`  ✓ Added loot with components:`, components.map(c => `${c.name} (equipped: ${c.equipCount > 0})`))
         }
       } else {
         console.log(`  ✗ Skipped loot with count=0`)
@@ -914,7 +944,25 @@ export class ImporterApp extends FormApplication {
     if (item) {
       const itemObj = item.toObject()
       itemObj.system.quantity = Number(itemData.count) || 1
-      console.log(`  ✓ Found equipment: "${item.name}" (from "${itemData.name}")`)
+      
+      // Set equipped status based on equip-count from XML
+      const equipCount = Number(itemData.equipCount) || 0
+      const shouldBeEquipped = equipCount > 0
+      itemObj.system.equipped = shouldBeEquipped
+      
+      // Ensure the equipped status is correctly set
+      if (itemObj.system.equipped !== shouldBeEquipped) {
+        console.warn(`  ⚠️ Equipped status mismatch for ${itemData.name}: expected ${shouldBeEquipped}, got ${itemObj.system.equipped}`)
+        itemObj.system.equipped = shouldBeEquipped
+      }
+      
+      // Add a flag to track that we've explicitly set the equipped status
+      if (!itemObj.flags) itemObj.flags = {}
+      if (!itemObj.flags.import4e) itemObj.flags.import4e = {}
+      itemObj.flags.import4e.equippedStatusSet = true
+      itemObj.flags.import4e.originalEquippedStatus = shouldBeEquipped
+      
+      console.log(`  ✓ Found equipment: "${item.name}" (from "${itemData.name}") - Equipped: ${itemObj.system.equipped}`)
       return itemObj
     }
 
@@ -942,7 +990,19 @@ export class ImporterApp extends FormApplication {
     const mergedItem = await this._mergeItems(baseItemRef[0], enchantmentRef[0])
     if (mergedItem) {
       mergedItem.system.quantity = Number(baseItem.count) || 1
-      console.log(`Imported composite equipment: ${mergedItem.name}`)
+      
+      // Set equipped status based on equip-count from XML
+      const equipCount = Number(baseItem.equipCount) || 0
+      const shouldBeEquipped = equipCount > 0
+      mergedItem.system.equipped = shouldBeEquipped
+      
+      // Ensure the equipped status is correctly set
+      if (mergedItem.system.equipped !== shouldBeEquipped) {
+        console.warn(`  ⚠️ Equipped status mismatch for composite ${mergedItem.name}: expected ${shouldBeEquipped}, got ${mergedItem.system.equipped}`)
+        mergedItem.system.equipped = shouldBeEquipped
+      }
+      
+      console.log(`Imported composite equipment: ${mergedItem.name} - Equipped: ${mergedItem.system.equipped}`)
       return mergedItem
     }
 
