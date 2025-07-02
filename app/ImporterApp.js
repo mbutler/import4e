@@ -71,7 +71,7 @@ export class ImporterApp extends FormApplication {
       const featNames = Object.values(this._getRulesElements(xml, "Feat"))
       const feats = await this._fetchItems("dnd-4e-compendium.module-feats", featNames, lookup.feat, true)
 
-      this._setProgress(15, "Importing heritage features...")
+      this._setProgress(15, "Importing racial features...")
       const heritageFeatures = await this._fetchHeritageFeatures(xml)
 
       this._setProgress(25, "Importing features...")
@@ -229,13 +229,10 @@ export class ImporterApp extends FormApplication {
       await actor.createEmbeddedDocuments("Item", finalItems)
       
       // Post-import: Check and fix skill values
-      console.log("=== POST-IMPORT SKILL CHECK ===")
       const skillUpdates = []
       for (const [skillId, skill] of Object.entries(actor.system.skills)) {
         if (skill.absolute !== undefined && skill.absolute !== null) {
-          console.log(`Checking skill ${skillId}: absolute=${skill.absolute}, total=${skill.total}`)
           if (skill.total !== skill.absolute) {
-            console.log(`  ⚠️ Skill ${skillId} total (${skill.total}) doesn't match absolute (${skill.absolute})`)
             skillUpdates.push({
               [`system.skills.${skillId}.total`]: skill.absolute
             })
@@ -244,7 +241,6 @@ export class ImporterApp extends FormApplication {
       }
       
       if (skillUpdates.length > 0) {
-        console.log(`Fixing ${skillUpdates.length} skill totals`)
         await actor.update(skillUpdates)
       }
       
@@ -285,11 +281,9 @@ export class ImporterApp extends FormApplication {
         const match = xml.querySelector(`Stat > alias[name='${aliasName}']`)
         if (match) {
           const value = Number(match.parentElement.getAttribute("value"))
-          console.log(`Found ${aliasName} with value: ${value}`)
           return value
         }
       }
-      console.log(`No match found for aliases: ${aliases.join(', ')}`)
       return 10
     }
 
@@ -593,9 +587,6 @@ export class ImporterApp extends FormApplication {
             results.push(item.toObject())
             seenPowers.add(item.name)
             seenPowerIds.add(item._id)
-            console.log(`Imported power: ${item.name} (from ${powerName})`)
-          } else {
-            console.log(`Skipped duplicate power: ${item.name} (ID: ${item._id})`)
           }
         }
       } else {
@@ -615,7 +606,6 @@ export class ImporterApp extends FormApplication {
 
     try {
       const allCorePowers = await pack.getDocuments()
-      console.log(`Found ${allCorePowers.length} total core powers`)
       return allCorePowers.map(power => power.toObject())
     } catch (err) {
       console.error("Error fetching core powers:", err)
@@ -693,10 +683,6 @@ export class ImporterApp extends FormApplication {
       }
     }
 
-    if (bestMatch) {
-      console.log(`Fuzzy matched: "${powerName}" -> "${bestMatch.name}" (score: ${bestScore.toFixed(2)})`)
-    }
-
     return bestMatch
   }
 
@@ -771,7 +757,6 @@ export class ImporterApp extends FormApplication {
           if (placeholder && !seenItems.has(placeholder.name)) {
             results.push(placeholder)
             seenItems.add(placeholder.name)
-            console.log(`Created placeholder: ${placeholder.name}`)
           }
         } else {
           console.warn(`Item not found: ${resolvedName}`)
@@ -788,9 +773,6 @@ export class ImporterApp extends FormApplication {
           results.push(item.toObject())
           seenItems.add(item.name)
           seenItemIds.add(item._id)
-          console.log(`Imported item: ${item.name} (from ${rawName})`)
-        } else {
-          console.log(`Skipped duplicate: ${item.name} (ID: ${item._id})`)
         }
       }
     }
@@ -833,10 +815,6 @@ export class ImporterApp extends FormApplication {
     const results = []
     const seenEquipment = new Set() // Track seen equipment to prevent duplicates
 
-    console.log("=== EQUIPMENT IMPORT DEBUG ===")
-    console.log("Processing loot items:", loot.length)
-    console.log("Raw loot data:", loot.map(item => item.map(i => ({ name: i.name, type: i.type, count: i.count, equipCount: i.equipCount }))))
-
     for (const compositeItem of loot) {
       if (compositeItem.length === 0) continue
 
@@ -846,11 +824,8 @@ export class ImporterApp extends FormApplication {
         this._isRitualName(item.name)
       )
       if (hasRitual) {
-        console.log(`Skipping ritual in equipment import: ${compositeItem.map(i => i.name).join(" + ")}`)
         continue
       }
-
-      console.log("Processing composite item:", compositeItem.map(i => i.name))
 
       try {
         const importedItem = await this._importCompositeItem(compositeItem)
@@ -859,24 +834,13 @@ export class ImporterApp extends FormApplication {
           if (!seenEquipment.has(importedItem.name)) {
             results.push(importedItem)
             seenEquipment.add(importedItem.name)
-            console.log(`✓ Imported equipment: ${importedItem.name}`)
-          } else {
-            console.log(`Skipped duplicate equipment: ${importedItem.name}`)
           }
-        } else {
-          console.log(`✗ Failed to import composite item: ${compositeItem.map(i => i.name).join(" + ")}`)
         }
       } catch (err) {
         console.error("Error importing composite item:", err)
       }
     }
 
-    console.log(`Found ${results.length} equipment items`)
-    console.log("Equipment items:", results.map(item => item.name))
-    
-
-    
-    console.log("=== END EQUIPMENT DEBUG ===")
     return results
   }
 
@@ -902,8 +866,6 @@ export class ImporterApp extends FormApplication {
             if (!seenRituals.has(importedRitual.name)) {
               results.push(importedRitual)
               seenRituals.add(importedRitual.name)
-            } else {
-              console.log(`Skipped duplicate ritual: ${importedRitual.name}`)
             }
           }
         } catch (err) {
@@ -912,7 +874,6 @@ export class ImporterApp extends FormApplication {
       }
     }
 
-    console.log(`Found ${results.length} ritual items`)
     return results
   }
 
@@ -964,7 +925,6 @@ export class ImporterApp extends FormApplication {
         ritualObj.system.equipped = shouldBeEquipped
       }
       
-      console.log(`Imported ritual: ${ritual.name} - Equipped: ${ritualObj.system.equipped}`)
       return ritualObj
     }
 
@@ -974,30 +934,20 @@ export class ImporterApp extends FormApplication {
   _getLoot(xml) {
     const elements = []
 
-    console.log("=== LOOT EXTRACTION DEBUG ===")
     const allLootElements = xml.querySelectorAll("LootTally > loot")
-    console.log(`Found ${allLootElements.length} total loot elements`)
-    
-
     
     allLootElements.forEach((loot, index) => {
       const count = loot.getAttribute("count")
       const equipCount = loot.getAttribute("equip-count")
-      console.log(`Loot element ${index}: count=${count}, equip-count=${equipCount}`)
       
       if (count !== "0") {
         const components = this._getLootComponents(loot)
         if (components.length > 0) {
           elements.push(components)
-          console.log(`  ✓ Added loot with components:`, components.map(c => `${c.name} (equipped: ${c.equipCount > 0})`))
         }
-      } else {
-        console.log(`  ✗ Skipped loot with count=0`)
       }
     })
 
-    console.log(`Final loot elements: ${elements.length}`)
-    console.log("=== END LOOT EXTRACTION DEBUG ===")
     return elements
   }
 
@@ -1013,8 +963,6 @@ export class ImporterApp extends FormApplication {
           equipCount: loot.getAttribute("equip-count")
         }
         elements.push(element)
-        
-
       }
     })
 
@@ -1046,9 +994,6 @@ export class ImporterApp extends FormApplication {
     let resolvedName = lookup.equipment[itemData.name] || itemData.name
     const index = await pack.getIndex()
     
-    console.log(`  Looking for: "${itemData.name}" -> resolved to: "${resolvedName}"`)
-    console.log(`  Item data:`, itemData)
-    
     let entry = index.find(e => e.name === resolvedName)
     
     // Handle tier-based items
@@ -1069,7 +1014,6 @@ export class ImporterApp extends FormApplication {
     if (!entry) {
       const pattern = new RegExp(resolvedName.replace(/[\(\)\[\]\+]/g, "\\$&"), "i")
       entry = index.find(e => e.name.match(pattern))
-      if (entry) console.log(`  ✓ Pattern matched: "${entry.name}"`)
     }
 
     // Try normalized name (remove parentheses)
@@ -1077,7 +1021,6 @@ export class ImporterApp extends FormApplication {
       const normalizedName = resolvedName.replace(/\s*\(.*?\)/, "").trim()
       const pattern = new RegExp(normalizedName.replace(/[\(\)\[\]\+]/g, "\\$&"), "i")
       entry = index.find(e => e.name.match(pattern))
-      if (entry) console.log(`  ✓ Normalized match: "${entry.name}"`)
     }
 
     // Try partial matching for complex names - but be more restrictive
@@ -1090,7 +1033,6 @@ export class ImporterApp extends FormApplication {
           const pattern = new RegExp(wordPair.replace(/[\(\)\[\]\+]/g, "\\$&"), "i")
           entry = index.find(e => e.name.match(pattern))
           if (entry) {
-            console.log(`  ✓ Partial word pair match: "${entry.name}" (matched on "${words[i]} ${words[i + 1]}")`)
             break
           }
         }
@@ -1100,9 +1042,6 @@ export class ImporterApp extends FormApplication {
           const firstWord = words[0]
           const pattern = new RegExp(`^${firstWord.replace(/[\(\)\[\]\+]/g, "\\$&")}`, "i")
           entry = index.find(e => e.name.match(pattern))
-          if (entry) {
-            console.log(`  ✓ First word match: "${entry.name}" (matched on "${firstWord}")`)
-          }
         }
       }
     }
@@ -1134,7 +1073,6 @@ export class ImporterApp extends FormApplication {
       itemObj.flags.import4e.equippedStatusSet = true
       itemObj.flags.import4e.originalEquippedStatus = shouldBeEquipped
       
-      console.log(`  ✓ Found equipment: "${item.name}" (from "${itemData.name}") - Equipped: ${itemObj.system.equipped}`)
       return itemObj
     }
 
@@ -1144,8 +1082,6 @@ export class ImporterApp extends FormApplication {
   async _importCompositeItemWithEnchantment(compositeItem, pack) {
     const baseItem = compositeItem[0]
     const enchantmentItem = compositeItem[1]
-
-    console.log(`  Composite item - Base: "${baseItem.name}", Enchantment: "${enchantmentItem.name}"`)
 
     // Try to find base item
     let baseItemRef = await this._fetchItems("dnd-4e-compendium.module-equipment", [baseItem.name], lookup.equipment)
@@ -1174,7 +1110,6 @@ export class ImporterApp extends FormApplication {
         mergedItem.system.equipped = shouldBeEquipped
       }
       
-      console.log(`Imported composite equipment: ${mergedItem.name} - Equipped: ${mergedItem.system.equipped}`)
       return mergedItem
     }
 
@@ -1256,9 +1191,6 @@ export class ImporterApp extends FormApplication {
               if (!seenSpecialItems.has(specialItem.name)) {
                 results.push(specialItem)
                 seenSpecialItems.add(specialItem.name)
-                console.log(`Imported special item: ${itemName}`)
-              } else {
-                console.log(`Skipped duplicate special item: ${specialItem.name}`)
               }
             }
           } else {
@@ -1284,16 +1216,12 @@ export class ImporterApp extends FormApplication {
             if (!seenSpecialItems.has(spellbookItem.name)) {
               results.push(spellbookItem)
               seenSpecialItems.add(spellbookItem.name)
-              console.log("Imported Wizard Spellbook")
-            } else {
-              console.log(`Skipped duplicate Wizard Spellbook: ${spellbookItem.name}`)
             }
           }
         }
       }
     }
 
-    console.log(`Found ${results.length} special items`)
     return results
   }
 
@@ -1312,13 +1240,9 @@ export class ImporterApp extends FormApplication {
         finalItems.push(item)
         seenNames.add(item.name)
         if (item._id) seenIds.add(item._id)
-        console.log(`Final import: ${item.name}`)
-      } else {
-        console.log(`Final deduplication skipped: ${item.name}`)
       }
     }
 
-    console.log(`Final deduplication: ${allItems.length} -> ${finalItems.length} items`)
     return finalItems
   }
 
@@ -1355,19 +1279,11 @@ export class ImporterApp extends FormApplication {
         const pack = game.packs.get(packId)
         if (!pack) continue
         const index = await pack.getIndex()
-        // Convert index to array for debug output
-        const indexArr = Array.from(index.values ? index.values() : index)
-        // Debug: Log pack info and sample names
-        console.log(`[Heritage Import] Searching pack: ${packId}, index length: ${indexArr.length}`)
-        console.log(`[Heritage Import] First 10 names in ${packId}:`, indexArr.slice(0, 10).map(e => e.name))
         let entry = null
         // 1. Lookup table (future-proof, not implemented yet)
         // const canonicalName = lookup.heritage?.[rawName] || rawName
         // 2. Exact match (normalized)
         entry = index.find(e => normalizeName(e.name) === normRawName)
-        if (entry) {
-          console.log(`[Heritage Import] Exact match for '${normRawName}' in ${packId}: '${entry.name}'`)
-        }
         // 3. Partial regex match (case-insensitive, normalized)
         if (!entry) {
           const pattern = new RegExp(normRawName.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1"), "i")
@@ -1375,7 +1291,6 @@ export class ImporterApp extends FormApplication {
           if (matches.length > 0) {
             matches.sort((a, b) => a.name.length - b.name.length)
             entry = matches[0]
-            console.log(`[Heritage Import] Partial match for '${normRawName}' in ${packId}: '${entry.name}'`)
           }
         }
         // 4. Normalized name (remove parentheticals, then normalize)
@@ -1386,7 +1301,6 @@ export class ImporterApp extends FormApplication {
           if (matches.length > 0) {
             matches.sort((a, b) => a.name.length - b.name.length)
             entry = matches[0]
-            console.log(`[Heritage Import] Paren-normalized match for '${noParen}' in ${packId}: '${entry.name}'`)
           }
         }
         if (entry) {
@@ -1404,7 +1318,7 @@ export class ImporterApp extends FormApplication {
         }
       }
       if (!found) {
-        console.warn(`[Heritage Import] Heritage feature not found: ${rawName}`)
+        console.warn(`Racial feature not found: ${rawName}`)
       }
     }
     return results
