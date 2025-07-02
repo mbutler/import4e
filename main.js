@@ -10,7 +10,7 @@ Hooks.once('ready', async () => {
 
 Hooks.on("renderActorDirectory", async (app, html, data) => {
   const button = $(
-    `<button class="import4e-button"><i class="fas fa-file-import"></i> 4E Import</button>`
+    `<button class="import4e-button"><i class="fas fa-file-import"></i> Import Hexcom Character</button>`
   )
 
   button.on("click", () => {

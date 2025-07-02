@@ -108,6 +108,10 @@ export class ImporterApp extends FormApplication {
       const finalItems = this._deduplicateFinalItems(allItems)
 
       this._setProgress(95, "Creating actor...")
+      
+      // Parse skills from XML
+      const skills = this._getSkills(xml)
+      
       // Create actor with correct values
       const actor = await Actor.create({
         name: details.name,
@@ -171,12 +175,56 @@ export class ImporterApp extends FormApplication {
             init: { value: details.initiative },
             speed: { value: details.speed }
           },
-          actionpoints: { value: details.actionPoints }
+          actionpoints: { value: details.actionPoints },
+          skills: skills,
+          skillTraining: {
+            untrained: {
+              value: 0,
+              feat: 0,
+              item: 0,
+              power: 0,
+              untyped: 0
+            },
+            trained: {
+              value: 5,
+              feat: 0,
+              item: 0,
+              power: 0,
+              untyped: 0
+            },
+            expertise: {
+              value: 8,
+              feat: 0,
+              item: 0,
+              power: 0,
+              untyped: 0
+            }
+          }
         }
       })
       
       // Import items normally
       await actor.createEmbeddedDocuments("Item", finalItems)
+      
+      // Post-import: Check and fix skill values
+      console.log("=== POST-IMPORT SKILL CHECK ===")
+      const skillUpdates = []
+      for (const [skillId, skill] of Object.entries(actor.system.skills)) {
+        if (skill.absolute !== undefined && skill.absolute !== null) {
+          console.log(`Checking skill ${skillId}: absolute=${skill.absolute}, total=${skill.total}`)
+          if (skill.total !== skill.absolute) {
+            console.log(`  ⚠️ Skill ${skillId} total (${skill.total}) doesn't match absolute (${skill.absolute})`)
+            skillUpdates.push({
+              [`system.skills.${skillId}.total`]: skill.absolute
+            })
+          }
+        }
+      }
+      
+      if (skillUpdates.length > 0) {
+        console.log(`Fixing ${skillUpdates.length} skill totals`)
+        await actor.update(skillUpdates)
+      }
       
       // Post-import: Ensure equipped status is correct for items that were explicitly set
       const equippedStatusUpdates = []
@@ -319,6 +367,110 @@ export class ImporterApp extends FormApplication {
       actionPoints: getStat("_BaseActionPoints") || 1,
       exp: Number(getText("Experience")) || 0
     }
+  }
+
+  _getSkills(xml) {
+    const skills = {}
+    
+    // Get all skill stats from StatBlock (the source of truth)
+    xml.querySelectorAll('StatBlock > Stat').forEach(stat => {
+      const alias = stat.querySelector('alias')
+      if (!alias) return
+      
+      const skillName = alias.getAttribute('name')
+      const skillValue = Number(stat.getAttribute('value')) || 0
+      
+      // Check if this is a main skill (not a training or misc bonus)
+      if (skillName && !skillName.includes(' Trained') && !skillName.includes(' Misc') && !skillName.includes(' Penalty')) {
+        // Map skill names to D&D 4E system skill IDs
+        const skillId = this._mapSkillNameToId(skillName)
+        if (skillId) {
+          // Get the ability associated with this skill
+          const ability = this._getSkillAbility(skillName)
+          
+          // Check if this skill is trained
+          const isTrained = xml.querySelector(`RulesElementTally > RulesElement[type="Skill Training"][name="${skillName}"]`) !== null
+          
+          skills[skillId] = {
+            value: 0, // Base value (usually 0)
+            base: 0, // Base bonus
+            training: isTrained ? 5 : 0, // 5=trained, 0=untrained
+            ability: ability, // Which ability this skill uses
+            absolute: skillValue, // Override calculated value with XML value (as a number)
+            total: skillValue, // Also set total directly
+            bonus: [{}], // Empty bonus array
+            chat: `@name uses @label.`, // Default chat message
+            armourCheck: this._isArmorCheckSkill(skillName), // Whether armor check penalty applies
+            feat: 0, // Feat bonus
+            item: 0, // Item bonus
+            power: 0, // Power bonus
+            untyped: 0, // Untyped bonus
+            effectBonus: 0 // Effect bonus
+          }
+        }
+      }
+    })
+    
+    return skills
+  }
+
+  _mapSkillNameToId(skillName) {
+    // Map skill names to D&D 4E system skill IDs (matching legacy importer)
+    const skillMap = {
+      'Acrobatics': 'acr',
+      'Arcana': 'arc',
+      'Athletics': 'ath',
+      'Bluff': 'blu',
+      'Diplomacy': 'dip',
+      'Dungeoneering': 'dun',
+      'Endurance': 'end',
+      'Heal': 'hea',
+      'Healing': 'hea',
+      'History': 'his',
+      'Insight': 'ins',
+      'Intimidate': 'itm',
+      'Nature': 'nat',
+      'Perception': 'prc',
+      'Religion': 'rel',
+      'Stealth': 'stl',
+      'Streetwise': 'stw',
+      'Thievery': 'thi'
+    }
+    
+    return skillMap[skillName] || null
+  }
+
+
+
+  _getSkillAbility(skillName) {
+    // Map skills to their associated abilities
+    const abilityMap = {
+      'Acrobatics': 'dex',
+      'Arcana': 'int',
+      'Athletics': 'str',
+      'Bluff': 'cha',
+      'Diplomacy': 'cha',
+      'Dungeoneering': 'wis',
+      'Endurance': 'con',
+      'Heal': 'wis',
+      'History': 'int',
+      'Insight': 'wis',
+      'Intimidate': 'cha',
+      'Nature': 'wis',
+      'Perception': 'wis',
+      'Religion': 'int',
+      'Stealth': 'dex',
+      'Streetwise': 'cha',
+      'Thievery': 'dex'
+    }
+    
+    return abilityMap[skillName] || 'str'
+  }
+
+  _isArmorCheckSkill(skillName) {
+    // Skills that have armor check penalties
+    const armorCheckSkills = ['Acrobatics', 'Athletics', 'Endurance', 'Stealth', 'Thievery']
+    return armorCheckSkills.includes(skillName)
   }
 
   _getRulesElements(xml, type) {
