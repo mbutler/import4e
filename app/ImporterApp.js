@@ -90,6 +90,17 @@ export class ImporterApp extends FormApplication {
         featureNames = [...featureNames, canonicalClassFeature]
       }
 
+      // Filter features by character level
+      const levelRegex = /(\d+)(st|nd|rd|th) level/i
+      featureNames = featureNames.filter(name => {
+        const match = name.match(levelRegex)
+        if (match) {
+          const requiredLevel = parseInt(match[1], 10)
+          return requiredLevel <= details.level
+        }
+        return true // If no level requirement, always include
+      })
+
       // Split features: canonical class feature vs. others
       const classFeatureNames = canonicalClassFeature ? [canonicalClassFeature] : []
       const otherFeatureNames = featureNames.filter(n => n !== canonicalClassFeature)
@@ -103,7 +114,23 @@ export class ImporterApp extends FormApplication {
       const otherFeatureItems = await this._fetchItems("dnd-4e-compendium.module-features", otherFeatureNames, lookup.feature, true)
 
       // Merge
-      const features = [...classFeatureItems, ...otherFeatureItems]
+      let features = [...classFeatureItems, ...otherFeatureItems]
+
+      // Also import Paragon Path, Epic Destiny, and Theme entries themselves
+      const extraFeatureItems = []
+      if (details.paragonPath) {
+        const pathItems = await this._fetchItems("dnd-4e-compendium.module-paths", [details.paragonPath], lookup.path, true)
+        extraFeatureItems.push(...pathItems)
+      }
+      if (details.epicDestiny) {
+        const destinyItems = await this._fetchItems("dnd-4e-compendium.module-destinies", [details.epicDestiny], lookup.destiny, true)
+        extraFeatureItems.push(...destinyItems)
+      }
+      if (details.theme) {
+        const themeItems = await this._fetchItems("dnd-4e-compendium.module-themes", [details.theme], lookup.theme, true)
+        extraFeatureItems.push(...themeItems)
+      }
+      features = [...features, ...extraFeatureItems]
 
       this._setProgress(35, "Importing powers...")
       let powerNames = this._getPowerNames(xml)
@@ -304,6 +331,15 @@ export class ImporterApp extends FormApplication {
     const getRulesArray = (type) => Object.values(this._getRulesElements(xml, type))
 
     const className = Object.values(this._getRulesElements(xml, "Class"))[0] || ""
+    let displayClass = className;
+    let classes = [className];
+    if (className === "Hybrid") {
+      const hybridClasses = Object.values(this._getRulesElements(xml, "Hybrid Class")).map(c => c.replace(/^Hybrid /, ""));
+      if (hybridClasses.length > 0) {
+        displayClass = hybridClasses.join("|");
+        classes = hybridClasses;
+      }
+    }
     const raceName = Object.values(this._getRulesElements(xml, "Race"))[0] || ""
     const paragonPathName = Object.values(this._getRulesElements(xml, "Paragon Path"))[0] || ""
     const epicDestinyName = Object.values(this._getRulesElements(xml, "Epic Destiny"))[0] || ""
@@ -348,8 +384,8 @@ export class ImporterApp extends FormApplication {
     return {
       name: getText("name") || "Unnamed Character",
       level: Number(getText("Level")) || 1,
-      class: className,
-      classes: className === "Hybrid" ? Object.values(this._getRulesElements(xml, "Hybrid Class")).map(c => c.replace("Hybrid ", "")) : [className],
+      class: displayClass,
+      classes: classes,
       race: raceName,
       subrace: subraceName,
       paragonPath: paragonPathName,
@@ -1334,19 +1370,14 @@ export class ImporterApp extends FormApplication {
     return results
   }
 
-  // Recursively collect all RulesElement elements of type 'Class Feature' in the XML
+  // Collect all RulesElement elements of type 'Class Feature' from RulesElementTally only
   _getClassFeatures(xml) {
     const features = []
-    function recurse(node) {
-      if (node.nodeType === 1 && node.nodeName === 'RulesElement' && node.getAttribute('type') === 'Class Feature') {
-        const name = node.getAttribute('name')
-        if (name) features.push(name)
-      }
-      for (let i = 0; i < node.childNodes.length; i++) {
-        recurse(node.childNodes[i])
-      }
-    }
-    recurse(xml)
+    const tally = xml.querySelectorAll('RulesElementTally > RulesElement[type="Class Feature"]')
+    tally.forEach(node => {
+      const name = node.getAttribute('name')
+      if (name) features.push(name)
+    })
     return features
   }
 }
