@@ -1,0 +1,47 @@
+{
+  "actor": {
+    "system.abilities.str.value": 21,
+    "system.abilities.con.value": 17,
+    "system.abilities.dex.value": 17,
+    "system.abilities.int.value": 9,
+    "system.abilities.wis.value": 13,
+    "system.abilities.cha.value": 12,
+    "system.attributes.hp.value": 104,
+    "system.attributes.hp.max": 104,
+    "system.attributes.init.value": 14,
+    "system.attributes.speed.value": 6,
+    "system.defences.ac.absolute": 26,
+    "system.defences.fort.absolute": 26,
+    "system.defences.ref.absolute": 24,
+    "system.defences.wil.absolute": 20,
+    "system.actionpoints.value": 1,
+    "system.skills.ath.absolute": 16,
+    "system.skills.ath.training": 5,
+    "system.skills.acr.absolute": 14,
+    "system.skills.acr.training": 5,
+    "system.skills.end.absolute": 16,
+    "system.skills.end.training": 5,
+    "system.details.level": 13,
+    "system.details.exp": 39000,
+    "system.details.surges.value": 12,
+    "system.details.surges.max": 12
+  },
+  "items": {
+    "Unarmored Agility": {
+      "system.featureType": "feat",
+      "system.level": "1"
+    },
+    "Master of the Fist [Multiclass Monk]": {
+      "system.description": "You gain training in Athletics or Acrobatics. You also gain the monk's Unarmed Combatant feature and gain proficiency with ki focuses. Published in Dragon Magazine 404.",
+      "system.level": "1"
+    },
+    "Thirst for Battle": {
+      "system.featureType": "feat",
+      "system.level": "1"
+    },
+    "Improved Monk Unarmed Strike": {
+      "system.featureType": "feat",
+      "system.level": "1"
+    }
+  }
+} 

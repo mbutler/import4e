@@ -304,6 +304,9 @@ export class ImporterApp extends FormApplication {
         await actor.updateEmbeddedDocuments("Item", equippedStatusUpdates)
       }
       
+      // Apply character-specific patches (ultimate override)
+      await this._applyCharacterPatches(actor, details.name)
+      
       this._setProgress(100, "Import complete!")
       ui.notifications.info(`Imported ${details.name} with ${finalItems.length} total items (${feats.length} feats, ${features.length} features, ${powers.length} powers, ${corePowers.length} core powers, ${equipment.length} equipment, ${rituals.length} rituals, ${specialItems.length} special items).`)
       setTimeout(() => {
@@ -1616,6 +1619,133 @@ export class ImporterApp extends FormApplication {
       if (name) features.push(name)
     })
     return features
+  }
+
+  async _applyCharacterPatches(actor, characterName) {
+    try {
+      const patchData = await this._loadCharacterPatch(characterName)
+      if (!patchData) {
+        return // No patch file found, nothing to do
+      }
+
+      console.log(`Applying patches for character: ${characterName}`)
+
+      // Apply actor-level patches with validation
+      if (patchData.actor && Object.keys(patchData.actor).length > 0) {
+        const actorUpdates = {}
+        for (const [path, value] of Object.entries(patchData.actor)) {
+          if (this._pathExists(actor, path)) {
+            actorUpdates[path] = value
+            console.log(`  ✓ Applying actor patch: ${path} = ${value}`)
+          } else {
+            console.warn(`  ✗ Patch path not found: ${path}`)
+          }
+        }
+        
+        if (Object.keys(actorUpdates).length > 0) {
+          console.log(`  Applying ${Object.keys(actorUpdates).length} actor patches`)
+          await actor.update(actorUpdates)
+        }
+      }
+
+      // Apply item-level patches with validation
+      if (patchData.items && Object.keys(patchData.items).length > 0) {
+        const itemUpdates = []
+        
+        for (const [itemName, itemPatches] of Object.entries(patchData.items)) {
+          // Find items by name (case-insensitive)
+          const items = actor.items.filter(i => 
+            i.name.toLowerCase() === itemName.toLowerCase()
+          )
+          
+          if (items.length === 0) {
+            console.warn(`  ✗ Item not found for patching: ${itemName}`)
+            continue
+          } else if (items.length > 1) {
+            console.warn(`  ⚠ Multiple items found with name "${itemName}", applying to first match`)
+          }
+          
+          const item = items[0]
+          const itemUpdate = { _id: item.id }
+          let validPatches = 0
+          
+          for (const [path, value] of Object.entries(itemPatches)) {
+            if (this._pathExists(item, path)) {
+              itemUpdate[path] = value
+              console.log(`  ✓ Applying item patch: ${itemName}.${path} = ${value}`)
+              validPatches++
+            } else {
+              console.warn(`  ✗ Item patch path not found: ${itemName}.${path}`)
+            }
+          }
+          
+          if (validPatches > 0) {
+            itemUpdates.push(itemUpdate)
+          }
+        }
+        
+        if (itemUpdates.length > 0) {
+          console.log(`  Applying ${itemUpdates.length} item patches`)
+          await actor.updateEmbeddedDocuments("Item", itemUpdates)
+        }
+      }
+
+      console.log(`Patches applied successfully for ${characterName}`)
+    } catch (err) {
+      console.error(`Error applying patches for ${characterName}:`, err)
+      ui.notifications.warn(`Warning: Failed to apply character patches for ${characterName}`)
+    }
+  }
+
+  _pathExists(obj, path) {
+    const keys = path.split('.')
+    let current = obj
+    
+    for (const key of keys) {
+      if (current && typeof current === 'object' && key in current) {
+        current = current[key]
+      } else {
+        return false
+      }
+    }
+    
+    return true
+  }
+
+  async _loadCharacterPatch(characterName) {
+    // Try multiple filename variations for the patch file
+    const possibleFilenames = [
+      `${characterName}.json`,
+      `${characterName.toLowerCase()}.json`,
+      `${this._normalizeCharacterName(characterName)}.json`
+    ]
+
+    for (const filename of possibleFilenames) {
+      try {
+        // Use the module's file system path
+        const patchPath = `modules/import4e/patches/${filename}`
+        const response = await fetch(patchPath)
+        if (response.ok) {
+          const patchData = await response.json()
+          console.log(`Loaded patch file: ${patchPath}`)
+          return patchData
+        }
+      } catch (err) {
+        // Continue to next filename variation
+        continue
+      }
+    }
+
+    // No patch file found
+    return null
+  }
+
+  _normalizeCharacterName(name) {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .trim()
   }
 }
 

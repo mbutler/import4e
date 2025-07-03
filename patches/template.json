@@ -1,0 +1,848 @@
+{
+  "actor": {
+    "name": "",
+    "type": "Player Character",
+    "img": "",
+    "system": {
+      "biography": "",
+      "details": {
+        "size": "",
+        "origin": "",
+        "type": "",
+        "other": "",
+        "race": "",
+        "age": "",
+        "gender": "",
+        "height": "",
+        "weight": "",
+        "alignment": "",
+        "deity": "",
+        "level": 0,
+        "tier": 0,
+        "exp": 0,
+        "bloodied": 0,
+        "surgeValue": 0,
+        "surgeBon": {
+          "bonus": [{}],
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "value": 0
+        },
+        "surges": {
+          "value": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "max": 0
+        },
+        "surgeEnv": {
+          "bonus": [{}],
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "value": 0
+        },
+        "saves": {
+          "bonus": [{}],
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "value": 0
+        },
+        "class": "",
+        "paragon": "",
+        "epic": "",
+        "secondwind": false,
+        "secondwindEffect": {},
+        "deathsaves": 0,
+        "deathsavefail": 0,
+        "deathsaveCrit": 0,
+        "deathsavebon": {
+          "bonus": [{}],
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "value": 0
+        },
+        "secondwindbon": {
+          "bonus": [{}],
+          "value": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "custom": ""
+        },
+        "weaponProf": {
+          "value": [],
+          "custom": ""
+        },
+        "armourProf": {
+          "value": [],
+          "custom": ""
+        },
+        "isBloodied": false
+      },
+      "languages": {
+        "spoken": {
+          "value": [],
+          "custom": ""
+        },
+        "script": {
+          "value": [],
+          "custom": ""
+        }
+      },
+      "senses": {
+        "vision": {
+          "value": [],
+          "custom": ""
+        },
+        "special": {
+          "value": [],
+          "custom": ""
+        },
+        "notes": ""
+      },
+      "abilities": {
+        "str": {
+          "value": 0,
+          "chat": "",
+          "mod": 0
+        },
+        "con": {
+          "value": 0,
+          "chat": "",
+          "mod": 0
+        },
+        "dex": {
+          "value": 0,
+          "chat": "",
+          "mod": 0
+        },
+        "int": {
+          "value": 0,
+          "chat": "",
+          "mod": 0
+        },
+        "wis": {
+          "value": 0,
+          "chat": "",
+          "mod": 0
+        },
+        "cha": {
+          "value": 0,
+          "chat": "",
+          "mod": 0
+        }
+      },
+      "attributes": {
+        "hp": {
+          "value": 0,
+          "min": 0,
+          "max": 0,
+          "starting": 0,
+          "perlevel": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "misc": 0,
+          "autototal": false,
+          "temprest": false
+        },
+        "temphp": {
+          "value": 0,
+          "max": 0
+        },
+        "init": {
+          "value": 0,
+          "ability": "",
+          "bonus": [{}],
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "notes": ""
+        },
+        "speed": {
+          "value": 0
+        }
+      },
+      "actionpoints": {
+        "value": 0,
+        "encounteruse": false,
+        "effects": "",
+        "notes": "",
+        "custom": ""
+      },
+      "defences": {
+        "ac": {
+          "value": 0,
+          "ability": "",
+          "armour": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "enhance": 0,
+          "shield": 0,
+          "bonus": [{}],
+          "temp": 0,
+          "light": false,
+          "altability": "",
+          "condition": "",
+          "chat": "",
+          "absolute": 0
+        },
+        "fort": {
+          "value": 0,
+          "ability": "",
+          "armour": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "enhance": 0,
+          "shield": 0,
+          "bonus": [{}],
+          "temp": 0,
+          "condition": "",
+          "chat": "",
+          "absolute": 0
+        },
+        "ref": {
+          "value": 0,
+          "ability": "",
+          "armour": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "enhance": 0,
+          "shield": 0,
+          "bonus": [{}],
+          "temp": 0,
+          "condition": "",
+          "chat": "",
+          "absolute": 0
+        },
+        "wil": {
+          "value": 0,
+          "ability": "",
+          "armour": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "enhance": 0,
+          "shield": 0,
+          "bonus": [{}],
+          "temp": 0,
+          "condition": "",
+          "chat": "",
+          "absolute": 0
+        }
+      },
+      "modifiers": {
+        "attack": {
+          "value": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}]
+        },
+        "damage": {
+          "value": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}]
+        },
+        "skills": {
+          "value": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}]
+        },
+        "defences": {
+          "value": 0,
+          "class": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}]
+        }
+      },
+      "skills": {
+        "acr": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "arc": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "ath": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "blu": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "dip": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "dun": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "end": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "hea": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "his": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "ins": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "itm": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "nat": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "prc": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "rel": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "stl": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "stw": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        },
+        "thi": {
+          "value": 0,
+          "base": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "training": 0,
+          "race": 0,
+          "untyped": 0,
+          "bonus": [{}],
+          "ability": "",
+          "armourCheck": false,
+          "chat": "",
+          "absolute": 0,
+          "total": 0,
+          "effectBonus": 0
+        }
+      },
+      "skillTraining": {
+        "untrained": {
+          "value": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "untyped": 0
+        },
+        "trained": {
+          "value": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "untyped": 0
+        },
+        "expertise": {
+          "value": 0,
+          "feat": 0,
+          "item": 0,
+          "power": 0,
+          "untyped": 0
+        }
+      }
+    },
+    "flags": {},
+    "randomImg": false
+  },
+  "items": {
+    "Example Item Name": {
+      "name": "",
+      "type": "",
+      "img": "",
+      "system": {
+        "description": {
+          "value": "",
+          "chat": "",
+          "unidentified": ""
+        },
+        "descriptionGM": {
+          "value": ""
+        },
+        "source": "",
+        "activation": {
+          "type": "",
+          "cost": 0,
+          "condition": ""
+        },
+        "duration": {
+          "value": null,
+          "units": ""
+        },
+        "target": "",
+        "range": {
+          "value": null,
+          "long": null,
+          "units": ""
+        },
+        "uses": {
+          "value": 0,
+          "max": "",
+          "per": ""
+        },
+        "consume": {
+          "type": "",
+          "target": "",
+          "amount": null
+        },
+        "macro": {
+          "type": "",
+          "scope": "",
+          "launchOrder": "",
+          "command": "",
+          "author": "",
+          "autoanimationHook": ""
+        },
+        "attack": {
+          "shareAttackRoll": false,
+          "isAttack": false,
+          "isBasic": false,
+          "isCharge": false,
+          "isOpp": false,
+          "canCharge": false,
+          "canOpp": false,
+          "ability": "",
+          "abilityBonus": 0,
+          "def": "",
+          "defBonus": 0,
+          "formula": "",
+          "damageType": {},
+          "effectType": {}
+        },
+        "hit": {
+          "shareDamageRoll": false,
+          "isDamage": false,
+          "isHealing": false,
+          "healSurge": "",
+          "baseQuantity": "",
+          "baseDiceType": "",
+          "detail": "",
+          "formula": "",
+          "critFormula": "",
+          "healFormula": ""
+        },
+        "miss": {
+          "detail": "",
+          "formula": ""
+        },
+        "effect": {
+          "detail": ""
+        },
+        "damage": {
+          "parts": []
+        },
+        "damageCrit": {
+          "parts": []
+        },
+        "damageImp": {
+          "parts": []
+        },
+        "damageCritImp": {
+          "parts": []
+        },
+        "damageType": {
+          "damage": false,
+          "acid": false,
+          "cold": false,
+          "fire": false,
+          "force": false,
+          "lightning": false,
+          "necrotic": false,
+          "physical": false,
+          "poison": false,
+          "psychic": false,
+          "radiant": false,
+          "thunder": false
+        },
+        "keyWords": [],
+        "powersource": "",
+        "secondPowersource": "",
+        "subName": "",
+        "prepared": false,
+        "powerType": "",
+        "powerSubtype": "",
+        "useType": "",
+        "actionType": "",
+        "weaponType": "",
+        "weaponUse": "",
+        "rangeType": "",
+        "rangeTextShort": "",
+        "rangeText": "",
+        "rangePower": null,
+        "area": null,
+        "rechargeRoll": "",
+        "rechargeCondition": "",
+        "damageShare": false,
+        "postEffect": false,
+        "postSpecial": false,
+        "autoGenChatPowerCard": false,
+        "sustain": {
+          "actionType": "",
+          "detail": ""
+        },
+        "trigger": "",
+        "requirement": "",
+        "special": "",
+        "specialAdd": {
+          "parts": []
+        },
+        "effectType": {
+          "beast": false,
+          "beastForm": false,
+          "charm": false,
+          "conjuration": false,
+          "fear": false,
+          "healing": false,
+          "illusion": false,
+          "invigorating": false,
+          "poison": false,
+          "polymorph": false,
+          "rage": false,
+          "rattling": false,
+          "reliable": false,
+          "sleep": false,
+          "spirit": false,
+          "stance": false,
+          "summoning": false,
+          "teleportation": false,
+          "zone": false,
+          "augmentable": false,
+          "aura": false,
+          "channelDiv": false,
+          "disease": false,
+          "elemental": false,
+          "enchantment": false,
+          "evocation": false,
+          "fullDis": false,
+          "gaze": false,
+          "mount": false,
+          "necro": false,
+          "nether": false,
+          "runic": false,
+          "transmutation": false
+        },
+        "effectHTML": false,
+        "chatFlavor": "",
+        "featureType": "",
+        "level": "",
+        "requirements": "",
+        "featureSource": "",
+        "featureGroup": "",
+        "auraSize": "",
+        "recharge": {
+          "value": null,
+          "charged": false
+        },
+        "equipped": false,
+        "quantity": 0,
+        "enhancement": 0,
+        "profBonus": 0,
+        "properties": {},
+        "armorType": "",
+        "armorBonus": 0,
+        "checkPenalty": 0,
+        "speedPenalty": 0,
+        "weight": 0,
+        "price": 0,
+        "ritualType": "",
+        "ritualLevel": 0,
+        "ritualTime": "",
+        "ritualDuration": "",
+        "ritualComponentCost": 0,
+        "ritualMarketPrice": 0,
+        "ritualKeySkill": "",
+        "ritualCategory": "",
+        "ritualDescription": "",
+        "ritualPrerequisites": "",
+        "ritualFocus": "",
+        "ritualComponent": "",
+        "ritualSpecial": ""
+      },
+      "effects": [],
+      "folder": null,
+      "sort": 0,
+      "flags": {}
+    }
+  }
+} 
